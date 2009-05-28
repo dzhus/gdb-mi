@@ -1137,6 +1137,7 @@ static char *magick[] = {
   ;; Regenerate breakpoints buffer in case it has been inadvertantly deleted.
   (gdb-get-buffer-create 'gdb-breakpoints-buffer)
   (gdb-invalidate-breakpoints)
+  (gdb-invalidate-threads)
   (gdb-get-changed-registers)
   (gdb-invalidate-registers)
   (gdb-invalidate-locals)
@@ -1651,11 +1652,62 @@ corresponding to the mode line clicked."
     (define-key map (vector 'header-line 'down-mouse-1) 'ignore)
     map))
 
-(defun gdb-todo-threads ()
-  (interactive)
-  (message-box
-   "TODO: Implement threads buffer using\nMI command -thread-info"))
+
+;;; Threads view
 
+(defun gdb-threads-buffer-name ()
+  (concat "*threads of " (gdb-get-target-string) "*"))
+
+(gdb-set-buffer-rules 'gdb-threads-buffer
+                      'gdb-threads-buffer-name
+                      'gdb-threads-mode)
+
+(def-gdb-auto-update-trigger gdb-invalidate-threads
+  (gdb-get-buffer-create 'gdb-threads-buffer)
+  "-thread-info\n"
+  gdb-thread-list-handler)
+
+(defun gdb-threads-mode ()
+  "Major mode for GDB threads.
+
+\\{gdb-threads-mode-map}"
+  (setq major-mode 'gdb-threads-mode)
+  (setq mode-name "Threads")
+  (use-local-map gdb-threads-mode-map)
+  (setq buffer-read-only t)
+  (buffer-disable-undo)
+  ;; TODO: header line
+  (run-mode-hooks 'gdb-threads-mode-hook)
+  'gdb-invalidate-threads)
+
+(defvar gdb-threads-mode-map
+  ;; TODO
+  (make-sparse-keymap))
+
+(defconst gdb-thread-list-regexp
+  "{id=\"\\(.*?\\)\".*?,target-id=\"\\(.*?\\)\",.*?}")
+
+(defun gdb-thread-list-handler ()
+  (setq gdb-pending-triggers (delq 'gdb-invalidate-threads
+                                   gdb-pending-triggers))
+  (let ((thread) (threads-list))
+    (with-current-buffer (gdb-get-buffer-create 'gdb-partial-output-buffer)
+      (goto-char (point-min))
+      (while (re-search-forward gdb-thread-list-regexp nil t)
+        (let ((thread (list (match-string 1)
+                            (match-string 2))))
+          (push thread threads-list))))
+    (let ((buf (gdb-get-buffer 'gdb-threads-buffer)))
+      (and buf
+       (with-current-buffer buf
+         (let ((buffer-read-only nil))
+           (erase-buffer)
+           (dolist (thread threads-list)
+             (insert
+              (concat
+               (format "%2s (%s)\n" (nth 0 thread) (nth 1 thread)))))))))))
+
+
 (defun gdb-todo-memory ()
   (interactive)
   (message-box
@@ -1689,14 +1741,14 @@ corresponding to the mode line clicked."
 		'local-map
 		(gdb-make-header-line-mouse-map
 		 'mouse-1
-		 'gdb-todo-threads
-;;		 (lambda (event) (interactive "e")
-;;; 		   (save-selected-window
-;;; 		     (select-window (posn-window (event-start event)))
-;;; 		     (set-window-dedicated-p (selected-window) nil)
-;;; 		     (switch-to-buffer
-;;; 		      (gdb-get-buffer-create 'gdb-threads-buffer))
-;;; 		     (set-window-dedicated-p (selected-window) t)))
+                 ;; TODO: same code few lines above
+		 (lambda (event) (interactive "e")
+		   (save-selected-window
+		     (select-window (posn-window (event-start event)))
+		     (set-window-dedicated-p (selected-window) nil)
+		     (switch-to-buffer
+		      (gdb-get-buffer-create 'gdb-threads-buffer))
+		     (set-window-dedicated-p (selected-window) t)))
 ))))
 
 (defun gdb-breakpoints-mode ()
