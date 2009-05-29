@@ -1708,18 +1708,24 @@ corresponding to the mode line clicked."
 (defun gdb-thread-list-handler ()
   (setq gdb-pending-triggers (delq 'gdb-invalidate-threads
                                    gdb-pending-triggers))
-  (with-current-buffer (gdb-get-buffer-create 'gdb-partial-output-buffer)
-    (let* ((res (json-partial-output))
-           (threads-list (fadr-member res ".threads")))
-      (let ((buf (gdb-get-buffer 'gdb-threads-buffer)))
-        (and buf
-             (with-current-buffer buf
-               (let ((buffer-read-only nil))
-                 (erase-buffer)
-                 (dolist (thread threads-list)
-                   (insert
-                    (fadr-format "~.id (~.target-id) - ~.state - ~.frame.file:~.frame.line\n"
-                                 thread))))))))))
+  (let* ((res (json-partial-output))
+         (threads-list (fadr-q "res.threads"))
+         (buf (gdb-get-buffer 'gdb-threads-buffer)))
+    (and buf
+         (with-current-buffer buf
+           (let ((buffer-read-only nil))
+             (erase-buffer)
+             (dolist (thread threads-list)
+               (insert
+                (fadr-format
+                 "~.id (~.target-id) ~.state	on ~.frame.func"
+                 thread))
+               (let ((where (or (and (fadr-q "thread.frame.file")
+                                     (fadr-format "~.frame.file:~.frame.line" thread))
+                                (fadr-q "thread.frame.from"))))
+                 (when where
+                   (insert (format " in %s" where))))
+               (insert (fadr-format " at ~.frame.addr\n" thread))))))))
 
 
 (defun gdb-todo-memory ()
