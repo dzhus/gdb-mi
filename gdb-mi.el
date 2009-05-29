@@ -879,6 +879,19 @@ The key should be one of the cars in `gdb-buffer-rules-assoc'."
       (setq bufs (cdr bufs)))
     retval))
 
+;; Used to define all gdb-frame-*-buffer functions except
+;; `gdb-frame-separate-io-buffer'
+(defmacro gdb-def-frame-for-buffer (name buffer &optional doc)
+  "Define a function NAME which shows gdb BUFFER.
+
+DOC is an optional documentation string."
+  `(defun ,name ()
+     ,(when doc doc)
+     (interactive)
+     (let ((special-display-regexps (append special-display-regexps '(".*")))
+           (special-display-frame-alist gdb-frame-parameters))
+       (display-buffer (gdb-get-buffer-create ,buffer)))))
+
 ;;
 ;; This assoc maps buffer type symbols to rules.  Each rule is a list of
 ;; at least one and possible more functions.  The functions have these
@@ -1632,12 +1645,10 @@ If not in a source or disassembly buffer just set point."
   (gdb-display-buffer
    (gdb-get-buffer-create 'gdb-breakpoints-buffer) t))
 
-(defun gdb-frame-breakpoints-buffer ()
-  "Display status of user-settable breakpoints in a new frame."
-  (interactive)
-  (let ((special-display-regexps (append special-display-regexps '(".*")))
-	(special-display-frame-alist gdb-frame-parameters))
-    (display-buffer (gdb-get-buffer-create 'gdb-breakpoints-buffer))))
+(gdb-def-frame-for-buffer
+ gdb-frame-breakpoints-buffer
+ 'gdb-breakpoints-buffer
+ "Display status of user-settable breakpoints in a new frame.")
 
 (defvar gdb-breakpoints-mode-map
   (let ((map (make-sparse-keymap))
@@ -1707,12 +1718,10 @@ FILE is a full path."
   (gdb-display-buffer
    (gdb-get-buffer-create 'gdb-threads-buffer) t))
 
-(defun gdb-frame-stack-buffer ()
-  "Display threads in a new frame."
-  (interactive)
-  (let ((special-display-regexps (append special-display-regexps '(".*")))
-	(special-display-frame-alist gdb-frame-parameters))
-    (display-buffer (gdb-get-buffer-create 'gdb-threads-buffer))))
+(gdb-def-frame-for-buffer
+ gdb-frame-threads-buffer
+ 'gdb-threads-buffer
+ "Display threads in a new frame.")
 
 (gdb-set-buffer-rules 'gdb-threads-buffer
                       'gdb-threads-buffer-name
@@ -1964,12 +1973,10 @@ from=\"\\(.*?\\)\"\\)")
   (gdb-display-buffer
    (gdb-get-buffer-create 'gdb-stack-buffer) t))
 
-(defun gdb-frame-stack-buffer ()
-  "Display backtrace of current stack in a new frame."
-  (interactive)
-  (let ((special-display-regexps (append special-display-regexps '(".*")))
-	(special-display-frame-alist gdb-frame-parameters))
-    (display-buffer (gdb-get-buffer-create 'gdb-stack-buffer))))
+(gdb-def-frame-for-buffer
+ gdb-frame-stack-buffer
+ 'gdb-stack-buffer
+  "Display backtrace of current stack in a new frame.")
 
 (defvar gdb-frames-mode-map
   (let ((map (make-sparse-keymap)))
@@ -2156,12 +2163,10 @@ from=\"\\(.*?\\)\"\\)")
   (gdb-display-buffer
    (gdb-get-buffer-create 'gdb-locals-buffer) t))
 
-(defun gdb-frame-locals-buffer ()
-  "Display local variables of current stack and their values in a new frame."
-  (interactive)
-  (let ((special-display-regexps (append special-display-regexps '(".*")))
-	(special-display-frame-alist gdb-frame-parameters))
-    (display-buffer (gdb-get-buffer-create 'gdb-locals-buffer))))
+(gdb-def-frame-for-buffer
+ gdb-frame-locals-buffer
+ 'gdb-locals-buffer
+  "Display local variables of current stack and their values in a new frame.")
 
 
 ;; Registers buffer.
@@ -2255,12 +2260,10 @@ from=\"\\(.*?\\)\"\\)")
   (gdb-display-buffer
    (gdb-get-buffer-create 'gdb-registers-buffer) t))
 
-(defun gdb-frame-registers-buffer ()
-  "Display integer register contents in a new frame."
-  (interactive)
-  (let ((special-display-regexps (append special-display-regexps '(".*")))
-	(special-display-frame-alist gdb-frame-parameters))
-    (display-buffer (gdb-get-buffer-create 'gdb-registers-buffer))))
+(gdb-def-frame-for-buffer
+ gdb-frame-registers-buffer
+ 'gdb-registers-buffer
+  "Display integer register contents in a new frame.")
 
 ;; Needs GDB 6.4 onwards (used to fail with no stack).
 (defun gdb-get-changed-registers ()
