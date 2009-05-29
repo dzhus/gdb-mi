@@ -104,7 +104,10 @@ FIELD is a symbol."
 ;; TODO: define this function using macros to ease the adding of new
 ;; selector types
 (defun fadr-member (object path)
-  "Access data in OBJECT using PATH."
+  "Access data in OBJECT using PATH.
+
+This function is not match-safe, meaning that you may need to
+wrap a call to it with `save-match-data'."
   (if (string= path "")
       object
     (let ((index (fadr-index-select path))
@@ -140,17 +143,15 @@ FIELD is a symbol."
   "Replace all occurences ~.path in STRING of with results of
   respective queries to OBJECT using `fadr-member' and
   proceed with `format' call with OBJECTS."
-  (with-temp-buffer
-    (insert string)
-    (goto-char (point-min))
-    (let ((fadr-regexp (concat "~\\(" fadr-path-regexp "\\)")))
-      (while (re-search-forward fadr-regexp (point-max) t)
-        (save-excursion
-          (goto-char (match-beginning 0))
-          (replace-string (match-string 0)
-                          (format "%s" (fadr-member object (match-string 1)))))))
-    (apply 'format (append (list (buffer-string))
-                           objects))))
+  (let ((new-string
+         (replace-regexp-in-string
+          (concat "~\\(" fadr-path-regexp "\\)")
+          (function (lambda (text)
+                      (save-match-data
+                        (format "%s"
+                                (fadr-member object (substring text 1))))))
+          string)))
+    (apply 'format (append (list new-string) objects))))
 
 (provide 'fadr)
 ;;; fadr.el ends here
