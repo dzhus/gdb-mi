@@ -1701,6 +1701,19 @@ FILE is a full path."
 (defun gdb-threads-buffer-name ()
   (concat "*threads of " (gdb-get-target-string) "*"))
 
+(defun gdb-display-threads-buffer ()
+  "Display threads."
+  (interactive)
+  (gdb-display-buffer
+   (gdb-get-buffer-create 'gdb-threads-buffer) t))
+
+(defun gdb-frame-stack-buffer ()
+  "Display threads in a new frame."
+  (interactive)
+  (let ((special-display-regexps (append special-display-regexps '(".*")))
+	(special-display-frame-alist gdb-frame-parameters))
+    (display-buffer (gdb-get-buffer-create 'gdb-threads-buffer))))
+
 (gdb-set-buffer-rules 'gdb-threads-buffer
                       'gdb-threads-buffer-name
                       'gdb-threads-mode)
@@ -2361,8 +2374,7 @@ is set in them."
     `(menu-item "GDB-Windows" ,menu
 		:visible (eq gud-minor-mode 'gdbmi)))
   (define-key menu [gdb] '("Gdb" . gdb-display-gdb-buffer))
-;  (define-key menu [threads] '("Threads" . gdb-display-threads-buffer))
-  (define-key menu [threads] '("Threads" . gdb-todo-threads))
+  (define-key menu [threads] '("Threads" . gdb-display-threads-buffer))
 ;  (define-key menu [memory] '("Memory" . gdb-display-memory-buffer))
   (define-key menu [memory] '("Memory" . gdb-todo-memory))
 ;  (define-key menu [disassembly]
@@ -2382,8 +2394,7 @@ is set in them."
     `(menu-item "GDB-Frames" ,menu
 		:visible (eq gud-minor-mode 'gdbmi)))
   (define-key menu [gdb] '("Gdb" . gdb-frame-gdb-buffer))
-;  (define-key menu [threads] '("Threads" . gdb-frame-threads-buffer))
-  (define-key menu [threads] '("Threads" . gdb-todo-threads))
+  (define-key menu [threads] '("Threads" . gdb-frame-threads-buffer))
 ;  (define-key menu [memory] '("Memory" . gdb-frame-memory-buffer))
   (define-key menu [memory] '("Memory" . gdb-todo-memory))
 ;  (define-key menu [disassembly] '("Disassembly" . gdb-frame-assembler-buffer))
