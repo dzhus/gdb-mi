@@ -54,7 +54,6 @@
 FIELD is a symbol."
   (cdr (assoc field object)))
 
-
 (defsubst bol-regexp (regexp)
   (concat "^" regexp))
 (defconst fadr-field-name-regexp
