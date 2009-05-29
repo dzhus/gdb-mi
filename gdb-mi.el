@@ -1676,6 +1676,28 @@ corresponding to the mode line clicked."
 
 ;;; Threads view
 
+(defun gdb-jump-to (file line)
+  (find-file-other-window file)
+  (goto-line line))
+
+(define-button-type 'gdb-file-button
+  'help-echo "Push to jump to source code"
+;  'face 'bold
+  'action
+  (lambda (b)
+    (gdb-jump-to (button-get b 'file)
+                 (button-get b 'line))))
+
+(defun gdb-insert-file-location-button (file line)
+  "Insert text button which allows jumping to FILE:LINE.
+
+FILE is a full path."
+  (insert-text-button
+   (format "%s:%d" (file-name-nondirectory file) line)
+   :type 'gdb-file-button
+   'file file
+   'line line))
+
 (defun gdb-threads-buffer-name ()
   (concat "*threads of " (gdb-get-target-string) "*"))
 
@@ -1697,7 +1719,7 @@ corresponding to the mode line clicked."
   (use-local-map gdb-threads-mode-map)
   (setq buffer-read-only t)
   (buffer-disable-undo)
-  ;; TODO: header line
+  (setq header-line-format gdb-breakpoints-header)
   (run-mode-hooks 'gdb-threads-mode-hook)
   'gdb-invalidate-threads)
 
@@ -1716,15 +1738,25 @@ corresponding to the mode line clicked."
            (let ((buffer-read-only nil))
              (erase-buffer)
              (dolist (thread threads-list)
-               (insert
-                (fadr-format
-                 "~.id (~.target-id) ~.state	on ~.frame.func"
-                 thread))
-               (let ((where (or (and (fadr-q "thread.frame.file")
-                                     (fadr-format "~.frame.file:~.frame.line" thread))
-                                (fadr-q "thread.frame.from"))))
-                 (when where
-                   (insert (format " in %s" where))))
+               (insert (fadr-format "~.id (~.target-id) ~.state	in ~.frame.func" thread))
+               ;; Arguments
+               (insert "(")
+               (let ((args (fadr-q "thread.frame.args")))
+                 (dolist (arg args)
+                   (insert (fadr-format "~.name=~.value," arg)))
+                 (when args (kill-backward-chars 1)))
+               (insert ")")
+               ;; Source file or library
+               (let ((file (fadr-q "thread.frame.fullname"))
+                     (line (fadr-q "thread.frame.line"))
+                     (from (fadr-q "thread.frame.from")))
+                 (cond (file
+                        ;; Filename with line number
+                        (insert " of ")
+                        (gdb-insert-file-location-button
+                         file (string-to-number line)))
+                       ;; Library
+                       (from (insert (format " of %s" from)))))
                (insert (fadr-format " at ~.frame.addr\n" thread))))))))
 
 
