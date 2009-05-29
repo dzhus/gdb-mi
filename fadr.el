@@ -118,11 +118,14 @@ FIELD is a symbol."
             (t (error "Bad path"))))))
 
 (defun fadr-q (full-path)
-  (if (string-match fadr-path-regexp full-path)
-      (let ((object (eval (intern (substring full-path 0 (match-beginning 0)))))
-            (path (substring full-path (match-beginning 0))))
-        (fadr-member object path))
-    (error "Bad path")))
+  (catch 'bad-path
+    (if (string-match fadr-path-regexp full-path)
+        (if (not (= (match-beginning 0) 0))
+            (let ((object (eval (intern (substring full-path 0 (match-beginning 0)))))
+                  (path (substring full-path (match-beginning 0))))
+              (fadr-member object path))
+          (throw 'bad-path (error "No object specified")))
+      (throw 'bad-path (error "Incorrect path")))))
 
 (defun fadr-peel-path (path)
   "Return PATH without first selector."
