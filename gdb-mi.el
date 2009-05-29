@@ -85,6 +85,8 @@
 ;;; Code:
 
 (require 'gud)
+(require 'json)
+(require 'fadr)
 
 (defvar tool-bar-map)
 (defvar speedbar-initial-expansion-list-name)
@@ -1355,6 +1357,25 @@ static char *magick[] = {
   (with-current-buffer (gdb-get-buffer-create 'gdb-partial-output-buffer)
     (erase-buffer)))
 
+(defun json-partial-output ()
+  "Parse gdb-partial-output-buffer with `json-read'.
+
+Note that GDB/MI output syntax is different from JSON both
+cosmetically and (in some cases) structurally, so correct results
+are not guaranteed."
+  (with-current-buffer (gdb-get-buffer-create 'gdb-partial-output-buffer)
+    (goto-char (point-min))
+    (insert "{")
+    ;; Wrap field names in double quotes and replace equal sign with
+    ;; semicolon.
+    ;; TODO: This breaks badly with foo= inside constants
+    (replace-regexp "\\([[:alpha:]-_]+\\)=" "\"\\1\":")
+    (goto-char (point-max))
+    (insert "}")
+    (goto-char (point-min))
+    (let ((json-array-type 'list))
+      (json-read))))
+
 ;; NAME is the function name. DEMAND-PREDICATE tests if output is really needed.
 ;; GDB-COMMAND is a string of such.  OUTPUT-HANDLER is the function bound to the
 ;; current input.
@@ -1684,28 +1705,21 @@ corresponding to the mode line clicked."
   ;; TODO
   (make-sparse-keymap))
 
-(defconst gdb-thread-list-regexp
-  "{id=\"\\(.*?\\)\".*?,target-id=\"\\(.*?\\)\",.*?}")
-
 (defun gdb-thread-list-handler ()
   (setq gdb-pending-triggers (delq 'gdb-invalidate-threads
                                    gdb-pending-triggers))
-  (let ((thread) (threads-list))
-    (with-current-buffer (gdb-get-buffer-create 'gdb-partial-output-buffer)
-      (goto-char (point-min))
-      (while (re-search-forward gdb-thread-list-regexp nil t)
-        (let ((thread (list (match-string 1)
-                            (match-string 2))))
-          (push thread threads-list))))
-    (let ((buf (gdb-get-buffer 'gdb-threads-buffer)))
-      (and buf
-       (with-current-buffer buf
-         (let ((buffer-read-only nil))
-           (erase-buffer)
-           (dolist (thread threads-list)
-             (insert
-              (concat
-               (format "%2s (%s)\n" (nth 0 thread) (nth 1 thread)))))))))))
+  (with-current-buffer (gdb-get-buffer-create 'gdb-partial-output-buffer)
+    (let* ((res (json-partial-output))
+           (threads-list (fadr-member res ".threads")))
+      (let ((buf (gdb-get-buffer 'gdb-threads-buffer)))
+        (and buf
+             (with-current-buffer buf
+               (let ((buffer-read-only nil))
+                 (erase-buffer)
+                 (dolist (thread threads-list)
+                   (insert
+                    (fadr-format "~.id (~.target-id) - ~.state - ~.frame.file:~.frame.line\n"
+                                 thread))))))))))
 
 
 (defun gdb-todo-memory ()
