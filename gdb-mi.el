@@ -4,7 +4,7 @@
 ;; Maintainer: Nick Roberts <nickrob@gnu.org>
 ;; Keywords: unix, tools
 
-;; Copyright (C) 2007, 2008 Free Software Foundation, Inc.
+;; Copyright (C) 2007, 2008, 2009 Free Software Foundation, Inc.
 
 ;; This file will become part of GNU Emacs.
 ;; Version 0.5 from ELPA archive.
@@ -322,7 +322,7 @@ detailed description of this mode.
   (gud-def gud-pstar  "print* %e" nil
 	   "Evaluate C dereferenced pointer expression at point.")
 
-  (gud-def gud-step   "-exec-step %p"              "\C-s" 
+  (gud-def gud-step   "-exec-step %p"              "\C-s"
 	   "Step one source line with display.")
   (gud-def gud-stepi  "-exec-step-instruction %p"  "\C-i"
 	   "Step one instruction with display.")
@@ -430,7 +430,7 @@ detailed description of this mode.
   ;;
   (setq gdb-buffer-type 'gdbmi)
   ;;
-  (gdb-force-mode-line-update 
+  (gdb-force-mode-line-update
    (propertize "initializing..." 'face font-lock-variable-name-face))
 
   (when gdb-use-separate-io-buffer
@@ -1130,7 +1130,7 @@ static char *magick[] = {
 (defun gdb-update ()
   "Update buffers showing status of debug session."
   (when gdb-first-prompt
-    (gdb-force-mode-line-update 
+    (gdb-force-mode-line-update
      (propertize "initializing..." 'face font-lock-variable-name-face))
     (gdb-init-1)
     (setq gdb-first-prompt nil))
@@ -1459,7 +1459,7 @@ file=\"\\(.*?\\)\".*?,fullname=\".*?\".*?,line=\"\\(.*?\\)\",\
 		       (nth 0 breakpoint) "   "
 		       (nth 1 breakpoint) "     "
 		       (nth 2 breakpoint) " "
-		       (propertize (nth 3 breakpoint) 
+		       (propertize (nth 3 breakpoint)
 			  'face (if (eq (string-to-char (nth 3 breakpoint)) ?y)
 				    font-lock-warning-face
 				  font-lock-type-face)) "   "
@@ -2036,7 +2036,7 @@ from=\"\\(.*?\\)\"\\)")
 			        help-echo "mouse-2: edit value"
 			        local-map ,gdb-edit-locals-map-1)
 			      value))
-		       (insert 
+		       (insert
 			(concat name "\t" (nth 1 local)
 				"\t" (nth 2 local) "\n")))
 		   (set-window-start window start)
@@ -2623,4 +2623,5 @@ BUFFER nil or omitted means use the current buffer."
 	   window left-margin-width right-margin-width)))))
 
 (provide 'gdb-mi)
-;;; gdbmi.el ends here
+
+;;; gdb-mi.el ends here
