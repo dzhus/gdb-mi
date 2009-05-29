@@ -35,6 +35,12 @@
 ;; Associated values are selected using a dot followed by a key, while
 ;; lists accept an index (0-based) in square brackets.
 ;;
+;; `fadr-q' is a one-argument shortcut fro `fadr-member', where
+;; (fadr-q "res.path") results to (fadr-member res ".path"):
+;;
+;;     (fadr-q "basket.apples[0].taste")
+;;     delicious
+;;
 ;; `fadr-format' substitutes ~PATH with results of `fadr-member' calls
 ;; with respective arguments:
 ;;
@@ -110,6 +116,13 @@ FIELD is a symbol."
              (fadr-member (fadr-get-field-value field object)
                                     (fadr-peel-path path)))
             (t (error "Bad path"))))))
+
+(defun fadr-q (full-path)
+  (if (string-match fadr-path-regexp full-path)
+      (let ((object (eval (intern (substring full-path 0 (match-beginning 0)))))
+            (path (substring full-path (match-beginning 0))))
+        (fadr-member object path))
+    (error "Bad path")))
 
 (defun fadr-peel-path (path)
   "Return PATH without first selector."
