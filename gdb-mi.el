@@ -1375,15 +1375,21 @@ static char *magick[] = {
   (with-current-buffer (gdb-get-buffer-create 'gdb-partial-output-buffer)
     (erase-buffer)))
 
-(defun json-partial-output ()
+(defun json-partial-output (&optional fix-key)
   "Parse gdb-partial-output-buffer with `json-read'.
+
+If FIX-KEY is non-nil, strip all \"FIX-KEY=\" occurences from
+partial output.
 
 Note that GDB/MI output syntax is different from JSON both
 cosmetically and (in some cases) structurally, so correct results
 are not guaranteed."
   (with-current-buffer (gdb-get-buffer-create 'gdb-partial-output-buffer)
     (goto-char (point-min))
-    (insert "{")
+    (while (re-search-forward (concat "[\\[,]\\(" fix-key "=\\)") nil t)
+      (replace-match "" nil nil nil 1))
+     (goto-char (point-min))
+     (insert "{")
     ;; Wrap field names in double quotes and replace equal sign with
     ;; semicolon.
     ;; TODO: This breaks badly with foo= inside constants
