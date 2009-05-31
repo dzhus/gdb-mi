@@ -1872,7 +1872,7 @@ FILE is a full path."
          (with-current-buffer buf
            (let ((buffer-read-only nil))
              (dolist (instr instructions)
-               (insert (fadr-format "~.address <~.func-name+~.offset>\t~.inst\n" instr))))))))
+               (insert (fadr-format "~.address <~.func-name+~.offset>:\t~.inst\n" instr))))))))
 
 
 ;;; Breakpoints view
