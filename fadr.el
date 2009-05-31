@@ -41,13 +41,13 @@
 ;;     (fadr-q "basket.apples[0].taste")
 ;;     delicious
 ;;
-;; `fadr-format' substitutes ~PATH with results of `fadr-member' calls
+;; `fadr-expand' substitutes ~PATH with results of `fadr-member' calls
 ;; with respective arguments:
 ;;
-;;     (fadr-format "~.color apple is ~.taste" (fadr-member basket ".apples[0]"))
+;;     (fadr-expand "~.color apple is ~.taste" (fadr-member basket ".apples[0]"))
 ;;     "green apple is delicious"
 ;;
-;; it's actually a special version of `format' and may be used as follows:
+;; `fadr-format' is like `fadr-expand', but it performs %-substitutions first:
 ;;
 ;;     (fadr-format "%s #%d is ~.color and ~.taste" (fadr-member basket ".apples[1]") "Apple" 1)
 ;;     "Apple #1 is red and disgusting"
@@ -139,19 +139,24 @@ wrap a call to it with `save-match-data'."
         (t (error "Could not peel path")))
   (substring path (match-end 0)))
 
+(defun fadr-expand (string object)
+  "Format STRING using OBJECT members.
+
+All ~.<path> substrings within STRING are replaced with
+respective values of OBJECT members."
+  (replace-regexp-in-string
+   (concat "~\\(" fadr-path-regexp "\\)")
+   #'(lambda (text)
+       (save-match-data
+         (format "%s"
+                 (fadr-member object (substring text 1)))))
+   string))
+
 (defun fadr-format (string object &rest objects)
-  "Replace all occurences ~.path in STRING of with results of
-  respective queries to OBJECT using `fadr-member' and
-  proceed with `format' call with OBJECTS."
-  (let ((new-string
-         (replace-regexp-in-string
-          (concat "~\\(" fadr-path-regexp "\\)")
-          #'(lambda (text)
-              (save-match-data
-                (format "%s"
-                        (fadr-member object (substring text 1)))))
-          string)))
-    (apply 'format (append (list new-string) objects))))
+  "Format STRING with OBJECTS, then `fadr-expand' the result with
+OBJECT."
+  (let ((new-string (apply 'format (append (list string) objects))))
+    (fadr-expand new-string object)))
 
 (provide 'fadr)
 ;;; fadr.el ends here
