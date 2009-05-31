@@ -1992,44 +1992,35 @@ FILE is a full path."
   "-stack-list-frames\n"
   gdb-stack-list-frames-handler)
 
-(defconst gdb-stack-list-frames-regexp
-"level=\"\\(.*?\\)\",addr=\"\\(.*?\\)\",func=\"\\(.*?\\)\",\
-\\(?:file=\".*?\",fullname=\"\\(.*?\\)\",line=\"\\(.*?\\)\"\\|\
-from=\"\\(.*?\\)\"\\)")
+(defun insert-frame-location (frame)
+  "Insert \"file:line\" button or library name for FRAME object."
+  (let ((file (fadr-q "frame.fullname"))
+        (line (fadr-q "frame.line"))
+        (from (fadr-q "frame.from")))
+    (cond (file
+           ;; Filename with line number
+           (insert " of ")
+           (gdb-insert-file-location-button
+            file (string-to-number line)))
+          ;; Library
+          (from (insert (format " of %s" from))))))
 
 (defun gdb-stack-list-frames-handler ()
   (setq gdb-pending-triggers (delq 'gdb-invalidate-frames
 				  gdb-pending-triggers))
-  (let ((frame nil)
-	(call-stack nil))
-    (with-current-buffer (gdb-get-buffer-create 'gdb-partial-output-buffer)
-      (goto-char (point-min))
-      (while (re-search-forward gdb-stack-list-frames-regexp nil t)
-	(let ((frame (list (match-string 1)
-			   (match-string 2)
-			   (match-string 3)
-			   (match-string 4)
-			   (match-string 5)
-			   (match-string 6))))
-	  (push frame call-stack))))
-    (let ((buf (gdb-get-buffer 'gdb-stack-buffer)))
-      (and buf (with-current-buffer buf
-		 (let ((p (point))
-		       (buffer-read-only nil))
-		   (erase-buffer)
-		   (insert "Level\tAddr\tFunc\tFile:Line\n")
-		   (dolist (frame (nreverse call-stack))
-		     (insert
-		      (concat
-		       (nth 0 frame) "\t"
-		       (nth 1 frame) "\t"
-		       (propertize (nth 2 frame)
-				   'face font-lock-function-name-face) "\t"
-		       (if (nth 3 frame)
-			   (concat "at "(nth 3 frame) ":" (nth 4 frame) "\n")
-			 (concat "from " (nth 5 frame) "\n")))))
-		   (goto-char p))))))
-  (gdb-stack-list-frames-custom))
+  (with-current-buffer (gdb-get-buffer-create 'gdb-partial-output-buffer)
+    (let* ((res (json-partial-output "frame"))
+           (stack (fadr-q "res.stack"))
+           (buf (gdb-get-buffer 'gdb-stack-buffer)))
+      (and buf 
+           (with-current-buffer buf
+             (let ((buffer-read-only nil))
+               (erase-buffer)
+               (dolist (frame (nreverse stack))
+                 (insert (fadr-expand "~.level in ~.func" frame))
+                 (insert-frame-location frame)
+                 (newline))
+               (gdb-stack-list-frames-custom)))))))
 
 (defun gdb-stack-list-frames-custom ()
   (with-current-buffer (gdb-get-buffer 'gdb-stack-buffer)
@@ -2038,7 +2029,7 @@ from=\"\\(.*?\\)\"\\)")
 	(goto-char (point-min))
 	(forward-line 1)
 	(while (< (point) (point-max))
-	  (add-text-properties (point-at-bol) (point-at-eol)
+	  (add-text-properties (point-at-bol) (1+ (point-at-bol))
 			     '(mouse-face highlight
 			       help-echo "mouse-2, RET: Select frame"))
 	  (beginning-of-line)
@@ -2078,6 +2069,10 @@ from=\"\\(.*?\\)\"\\)")
     (define-key map [follow-link] 'mouse-face)
     map))
 
+(defvar gdb-frames-font-lock-keywords
+  '(("in \\([^ ]+\\) of "  (1 font-lock-function-name-face)))
+  "Font lock keywords used in `gdb-frames-mode'.")
+
 (defun gdb-frames-mode ()
   "Major mode for gdb call stack.
 
@@ -2091,6 +2086,8 @@ from=\"\\(.*?\\)\"\\)")
   (setq buffer-read-only t)
   (buffer-disable-undo)
   (use-local-map gdb-frames-mode-map)
+  (set (make-local-variable 'font-lock-defaults)
+       '(gdb-frames-font-lock-keywords))
   (run-mode-hooks 'gdb-frames-mode-hook)
   'gdb-invalidate-frames)
 
@@ -2421,8 +2418,8 @@ is set in them."
     (if (gdb-get-buffer 'gdb-locals-buffer)
 	(with-current-buffer (gdb-get-buffer 'gdb-locals-buffer)
 	  (setq mode-name (concat "Locals:" gdb-selected-frame))))
-    (if (gdb-get-buffer 'gdb-assembler-buffer)
-	(with-current-buffer (gdb-get-buffer 'gdb-assembler-buffer)
+    (if (gdb-get-buffer 'gdb-disassembly-buffer)
+	(with-current-buffer (gdb-get-buffer 'gdb-disassembly-buffer)
 	  (setq mode-name (concat "Machine:" gdb-selected-frame))))
     (if gud-overlay-arrow-position
 	(let ((buffer (marker-buffer gud-overlay-arrow-position))
