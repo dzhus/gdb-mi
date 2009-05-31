@@ -146,10 +146,10 @@ wrap a call to it with `save-match-data'."
   (let ((new-string
          (replace-regexp-in-string
           (concat "~\\(" fadr-path-regexp "\\)")
-          (function (lambda (text)
-                      (save-match-data
-                        (format "%s"
-                                (fadr-member object (substring text 1))))))
+          #'(lambda (text)
+              (save-match-data
+                (format "%s"
+                        (fadr-member object (substring text 1)))))
           string)))
     (apply 'format (append (list new-string) objects))))
 
