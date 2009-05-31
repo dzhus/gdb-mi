@@ -30,14 +30,15 @@
          `-stack-info-frame` command. New variables similar to
          `gdb-pc-address` should be introduced
          
+   - [ ] keymap
+         
    - [ ] hyperlinks for jump instructions
 
          Add clickable buttons for `jmp`, `jl` arguments
    
 
 * GDB+Emacs interface improvements
-** TODO Better result records handling
-   Result indications should be collected
+   
 * Multiple threads support
 ** TODO Buffer model review
    Several new concepts for GDB buffers must be introduced:
