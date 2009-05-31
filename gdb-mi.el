@@ -1379,7 +1379,10 @@ static char *magick[] = {
   "Parse gdb-partial-output-buffer with `json-read'.
 
 If FIX-KEY is non-nil, strip all \"FIX-KEY=\" occurences from
-partial output.
+partial output. This is used to get rid of useless keys in lists
+in MI messages, e.g.: [key=.., key=..]. -stack-list-frames and
+-break-info are examples of MI commands which issue such
+responses.
 
 Note that GDB/MI output syntax is different from JSON both
 cosmetically and (in some cases) structurally, so correct results
