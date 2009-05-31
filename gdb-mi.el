@@ -1382,7 +1382,8 @@ are not guaranteed."
     ;; Wrap field names in double quotes and replace equal sign with
     ;; semicolon.
     ;; TODO: This breaks badly with foo= inside constants
-    (replace-regexp "\\([[:alpha:]-_]+\\)=" "\"\\1\":")
+    (while (re-search-forward "\\([[:alpha:]-_]+\\)=" nil t)
+      (replace-match "\"\\1\":" nil nil))
     (goto-char (point-max))
     (insert "}")
     (goto-char (point-min))
