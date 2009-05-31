@@ -126,7 +126,11 @@ Emacs can't find.")
 (defvar gdb-source-window nil)
 (defvar gdb-inferior-status nil)
 (defvar gdb-continuation nil)
-(defvar gdb-filter-output nil)
+(defvar gdb-filter-output nil
+  "Message to be shown in GUD console.
+
+This variable is updated in `gdb-done-or-error' and returned by
+`gud-gdbmi-marker-filter'.")
 
 (defvar gdb-buffer-type nil
   "One of the symbols bound in `gdb-buffer-rules'.")
