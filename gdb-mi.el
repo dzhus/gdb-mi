@@ -1791,15 +1791,85 @@ FILE is a full path."
                (insert (fadr-format " at ~.frame.addr\n" thread))))))))
 
 
+;;; Memory view
 (defun gdb-todo-memory ()
   (interactive)
   (message-box
    "TODO: Implement memory buffer using\nMI command -data-read-memory"))
+
+;;; Disassembly view
 
-(defun gdb-todo-assembly ()
+(defun gdb-disassembly-buffer-name ()
+  (concat "*disassembly of " (gdb-get-target-string) "*"))
+
+(defun gdb-display-disassembly-buffer ()
+  "Display disassembly."
   (interactive)
-  (message-box
-   "TODO: Implement disassembly buffer using\nMI command -data-disassemble"))
+  (gdb-display-buffer
+   (gdb-get-buffer-create 'gdb-disassembly-buffer) t))
+
+(gdb-def-frame-for-buffer
+ gdb-frame-disassembly-buffer
+ 'gdb-disassembly-buffer
+ "Display disassembly in a new frame.")
+
+(gdb-set-buffer-rules 'gdb-disassembly-buffer
+                      'gdb-disassembly-buffer-name
+                      'gdb-disassembly-mode)
+
+(def-gdb-auto-update-trigger gdb-invalidate-disassembly
+  (gdb-get-buffer-create 'gdb-disassembly-buffer)
+  (concat "-data-disassemble -f " (file-name-nondirectory gdb-main-file) " -l 1 -n -1 -- 0\n")
+  gdb-disassembly-handler)
+
+(defvar gdb-disassembly-font-lock-keywords
+  '(;; <__function.name+n>
+    ("<\\(\\(\\sw\\|[_.]\\)+\\)\\(\\+[0-9]+\\)?>"
+     (1 font-lock-function-name-face))
+    ;; 0xNNNNNNNN <__function.name+n>: opcode
+    ("^0x[0-9a-f]+ \\(<\\(\\(\\sw\\|[_.]\\)+\\)\\+[0-9]+>\\)?:[ \t]+\\(\\sw+\\)"
+     (4 font-lock-keyword-face))
+    ;; %register(at least i386)
+    ("%\\sw+" . font-lock-variable-name-face)
+    ("^\\(Dump of assembler code for function\\) \\(.+\\):"
+     (1 font-lock-comment-face)
+     (2 font-lock-function-name-face))
+    ("^\\(End of assembler dump\\.\\)" . font-lock-comment-face))
+  "Font lock keywords used in `gdb-disassembly-mode'.")
+
+(defvar gdb-disassembly-mode-map
+  ;; TODO
+  (make-sparse-keymap))
+
+(defun gdb-disassembly-mode ()
+  "Major mode for GDB threads.
+
+\\{gdb-disassembly-mode-map}"
+  (kill-all-local-variables)
+  (setq major-mode 'gdb-disassembly-mode)
+  (setq mode-name "Disassembly")
+  (use-local-map gdb-disassembly-mode-map)
+  (setq buffer-read-only t)
+  (buffer-disable-undo)
+  (set (make-local-variable 'font-lock-defaults)
+       '(gdb-disassembly-font-lock-keywords))
+  (run-mode-hooks 'gdb-disassembly-mode-hook)
+  'gdb-invalidate-disassembly)
+
+(defun gdb-disassembly-handler ()
+  (setq gdb-pending-triggers (delq 'gdb-invalidate-disassembly
+                                   gdb-pending-triggers))
+  (let* ((res (json-partial-output))
+         (instructions (fadr-member res ".asm_insns"))
+         (buf (gdb-get-buffer 'gdb-disassembly-buffer)))
+    (and buf
+         (with-current-buffer buf
+           (let ((buffer-read-only nil))
+             (dolist (instr instructions)
+               (insert (fadr-format "~.address <~.func-name+~.offset>\t~.inst\n" instr))))))))
+
+
+;;; Breakpoints view
 
 (defvar gdb-breakpoints-header
  `(,(propertize "Breakpoints"
@@ -2389,9 +2459,8 @@ is set in them."
   (define-key menu [threads] '("Threads" . gdb-display-threads-buffer))
 ;  (define-key menu [memory] '("Memory" . gdb-display-memory-buffer))
   (define-key menu [memory] '("Memory" . gdb-todo-memory))
-;  (define-key menu [disassembly]
-;    '("Disassembly" . gdb-display-assembler-buffer))
-  (define-key menu [disassembly] '("Disassembly" . gdb-todo-assembly))
+  (define-key menu [disassembly]
+    '("Disassembly" . gdb-display-assembler-buffer))
   (define-key menu [registers] '("Registers" . gdb-display-registers-buffer))
   (define-key menu [inferior]
     '(menu-item "Separate IO" gdb-display-separate-io-buffer
@@ -2409,8 +2478,7 @@ is set in them."
   (define-key menu [threads] '("Threads" . gdb-frame-threads-buffer))
 ;  (define-key menu [memory] '("Memory" . gdb-frame-memory-buffer))
   (define-key menu [memory] '("Memory" . gdb-todo-memory))
-;  (define-key menu [disassembly] '("Disassembly" . gdb-frame-assembler-buffer))
-  (define-key menu [disassembly] '("Disassembly" . gdb-todo-assembly))
+  (define-key menu [disassembly] '("Disassembly" . gdb-frame-assembler-buffer))
   (define-key menu [registers] '("Registers" . gdb-frame-registers-buffer))
   (define-key menu [inferior]
     '(menu-item "Separate IO" gdb-frame-separate-io-buffer
