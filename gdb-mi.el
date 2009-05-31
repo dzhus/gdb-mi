@@ -1848,7 +1848,7 @@ FILE is a full path."
   (make-sparse-keymap))
 
 (defun gdb-disassembly-mode ()
-  "Major mode for GDB threads.
+  "Major mode for GDB disassembly information.
 
 \\{gdb-disassembly-mode-map}"
   (kill-all-local-variables)
