@@ -1184,7 +1184,7 @@ static char *magick[] = {
   '((gdb-gdb . "(gdb) \n")
     (gdb-done . "\\([0-9]*\\)\\^done,?\\(.*?\\)\n")
     (gdb-starting . "\\([0-9]*\\)\\^running\n")
-    (gdb-error . "\\([0-9]*\\)\\^error,msg=\\(.*?\\)\n")
+    (gdb-error . "\\([0-9]*\\)\\^error,\\(.*?\\)\n")
     (gdb-console . "~\\(\".*?\"\\)\n")
     (gdb-internals . "&\\(\".*?\"\\)\n")
     (gdb-stopped . "\\*stopped,?\\(.*?\n\\)")
@@ -1327,7 +1327,8 @@ static char *magick[] = {
 	(setq token-number nil)
 	;; MI error - send to minibuffer
 	(when (eq type 'error)
-	    (message (read output-field))
+            ;; Skip "msg=" from `output-field'
+	    (message (read (substring output-field 4)))
 	    ;; Don't send to the console twice.  (If it is a console error
 	    ;; it is also in the console stream.)
 	    (setq output-field nil)))
