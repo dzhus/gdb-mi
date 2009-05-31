@@ -1789,17 +1789,7 @@ FILE is a full path."
                    (insert (fadr-format "~.name=~.value," arg)))
                  (when args (kill-backward-chars 1)))
                (insert ")")
-               ;; Source file or library
-               (let ((file (fadr-q "thread.frame.fullname"))
-                     (line (fadr-q "thread.frame.line"))
-                     (from (fadr-q "thread.frame.from")))
-                 (cond (file
-                        ;; Filename with line number
-                        (insert " of ")
-                        (gdb-insert-file-location-button
-                         file (string-to-number line)))
-                       ;; Library
-                       (from (insert (format " of %s" from)))))
+               (insert-frame-location (fadr-q "thread.frame"))
                (insert (fadr-format " at ~.frame.addr\n" thread))))))))
 
 
