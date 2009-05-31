@@ -1732,16 +1732,25 @@ FILE is a full path."
   "-thread-info\n"
   gdb-thread-list-handler)
 
+(defvar gdb-threads-font-lock-keywords
+  '(("in \\([^ ]+\\) ("  (1 font-lock-function-name-face))
+    (" \\(stopped\\) in "  (1 font-lock-warning-face))
+    ("\\(\\(\\sw\\|[_.]\\)+\\)="  (1 font-lock-variable-name-face)))
+  "Font lock keywords used in `gdb-threads-mode'.")
+
 (defun gdb-threads-mode ()
   "Major mode for GDB threads.
 
 \\{gdb-threads-mode-map}"
+  (kill-all-local-variables)
   (setq major-mode 'gdb-threads-mode)
   (setq mode-name "Threads")
   (use-local-map gdb-threads-mode-map)
   (setq buffer-read-only t)
   (buffer-disable-undo)
   (setq header-line-format gdb-breakpoints-header)
+  (set (make-local-variable 'font-lock-defaults)
+       '(gdb-threads-font-lock-keywords))
   (run-mode-hooks 'gdb-threads-mode-hook)
   'gdb-invalidate-threads)
 
@@ -1760,7 +1769,7 @@ FILE is a full path."
            (let ((buffer-read-only nil))
              (erase-buffer)
              (dolist (thread threads-list)
-               (insert (fadr-format "~.id (~.target-id) ~.state	in ~.frame.func" thread))
+               (insert (fadr-format "~.id (~.target-id) ~.state in ~.frame.func " thread))
                ;; Arguments
                (insert "(")
                (let ((args (fadr-q "thread.frame.args")))
