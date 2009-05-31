@@ -1808,7 +1808,7 @@ FILE is a full path."
   (concat "*disassembly of " (gdb-get-target-string) "*"))
 
 (defun gdb-display-disassembly-buffer ()
-  "Display disassembly."
+  "Display disassembly for current stack frame."
   (interactive)
   (gdb-display-buffer
    (gdb-get-buffer-create 'gdb-disassembly-buffer) t))
@@ -1824,7 +1824,11 @@ FILE is a full path."
 
 (def-gdb-auto-update-trigger gdb-invalidate-disassembly
   (gdb-get-buffer-create 'gdb-disassembly-buffer)
-  (concat "-data-disassemble -f " (file-name-nondirectory gdb-main-file) " -l 1 -n -1 -- 0\n")
+  (let ((file (file-name-nondirectory
+               (if gud-last-last-frame (car gud-last-last-frame)
+                 gdb-main-file)))
+        (line (if gud-last-frame (cdr gud-last-frame) 1)))
+    (format "-data-disassemble -f %s -l %d -n -1 -- 0\n" file line))
   gdb-disassembly-handler)
 
 (defvar gdb-disassembly-font-lock-keywords

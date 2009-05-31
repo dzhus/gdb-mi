@@ -25,12 +25,13 @@
    - [ ] keymap
    - [ ] current thread selection
 ** IN PROGRESS Disassembly
-   - [ ] basic information
+   - [X] basic information
          
          `-data-disassemble` command needs filename and line
          information, which can be learned from GDB with
-         `-stack-info-frame` command. New variables similar to
-         `gdb-pc-address` should be introduced
+         `-stack-info-frame` command. Probably, new variables similar
+         to `gdb-pc-address` should be introduced. Currently the code
+         relies on `gud-last-last-frame` variable.
          
    - [ ] keymap
          
