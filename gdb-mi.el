@@ -94,6 +94,8 @@
 (defvar gdb-pc-address nil "Initialization for Assembler buffer.
 Set to \"main\" at start if `gdb-show-main' is t.")
 (defvar gdb-selected-frame nil)
+(defvar gdb-selected-file nil)
+(defvar gdb-selected-line nil)
 (defvar gdb-frame-number nil)
 (defvar gdb-current-language nil)
 (defvar gdb-var-list nil
@@ -1160,6 +1162,7 @@ static char *magick[] = {
   (gdb-get-changed-registers)
   (gdb-invalidate-registers)
   (gdb-invalidate-locals)
+  (gdb-invalidate-disassembly)
   (when (and (boundp 'speedbar-frame) (frame-live-p speedbar-frame))
     (dolist (var gdb-var-list)
       (setcar (nthcdr 5 var) nil))
@@ -1825,9 +1828,8 @@ FILE is a full path."
 (def-gdb-auto-update-trigger gdb-invalidate-disassembly
   (gdb-get-buffer-create 'gdb-disassembly-buffer)
   (let ((file (file-name-nondirectory
-               (if gud-last-last-frame (car gud-last-last-frame)
-                 gdb-main-file)))
-        (line (if gud-last-frame (cdr gud-last-frame) 1)))
+               (or gdb-selected-file gdb-main-file)))
+        (line (or gdb-selected-line 1)))
     (format "-data-disassemble -f %s -l %d -n -1 -- 0\n" file line))
   gdb-disassembly-handler)
 
@@ -1874,6 +1876,7 @@ FILE is a full path."
     (and buf
          (with-current-buffer buf
            (let ((buffer-read-only nil))
+             (erase-buffer)
              (dolist (instr instructions)
                (insert (fadr-format "~.address <~.func-name+~.offset>:\t~.inst\n" instr))))))))
 
@@ -2404,32 +2407,35 @@ is set in them."
 (defun gdb-frame-handler ()
   (setq gdb-pending-triggers
 	(delq 'gdb-get-selected-frame gdb-pending-triggers))
-  (goto-char (point-min))
-  (when (re-search-forward gdb-stack-list-frames-regexp nil t)
-    (setq gdb-frame-number (match-string 1))
-    (setq gdb-pc-address (match-string 2))
-    (setq gdb-selected-frame (match-string 3))
-    (setq gud-last-frame
-	  (cons (match-string 4) (string-to-number (match-string 5))))
-    (gud-display-frame)
-    (if (gdb-get-buffer 'gdb-locals-buffer)
-	(with-current-buffer (gdb-get-buffer 'gdb-locals-buffer)
-	  (setq mode-name (concat "Locals:" gdb-selected-frame))))
-    (if (gdb-get-buffer 'gdb-disassembly-buffer)
-	(with-current-buffer (gdb-get-buffer 'gdb-disassembly-buffer)
-	  (setq mode-name (concat "Machine:" gdb-selected-frame))))
-    (if gud-overlay-arrow-position
-	(let ((buffer (marker-buffer gud-overlay-arrow-position))
-	      (position (marker-position gud-overlay-arrow-position)))
-	  (when buffer
-	    (with-current-buffer buffer
-	      (setq fringe-indicator-alist
-		    (if (string-equal gdb-frame-number "0")
-			nil
-		      '((overlay-arrow . hollow-right-triangle))))
-	      (setq gud-overlay-arrow-position (make-marker))
-	      (set-marker gud-overlay-arrow-position position)))))))
-
+  (let ((frame (fadr-member (json-partial-output) ".frame")))
+    (when frame
+      (setq gdb-frame-number (fadr-q "frame.level"))
+      (setq gdb-pc-address (fadr-q "frame.addr"))
+      (setq gdb-selected-frame (fadr-q "frame.func"))
+      (setq gdb-selected-file (fadr-q "frame.fullname"))
+      (let ((line (fadr-q "frame.line")))
+        (setq gdb-selected-line (or (and line (string-to-number line))
+                                    nil))) ; don't fail if line is nil
+      (setq gud-last-frame (cons gdb-selected-file gdb-selected-line))
+      (gud-display-frame)
+      (if (gdb-get-buffer 'gdb-locals-buffer)
+          (with-current-buffer (gdb-get-buffer 'gdb-locals-buffer)
+            (setq mode-name (concat "Locals:" gdb-selected-frame))))
+      (if (gdb-get-buffer 'gdb-disassembly-buffer)
+          (with-current-buffer (gdb-get-buffer 'gdb-disassembly-buffer)
+            (setq mode-name (concat "Machine:" gdb-selected-frame))))
+      (if gud-overlay-arrow-position
+          (let ((buffer (marker-buffer gud-overlay-arrow-position))
+                (position (marker-position gud-overlay-arrow-position)))
+            (when buffer
+              (with-current-buffer buffer
+                (setq fringe-indicator-alist
+                      (if (string-equal gdb-frame-number "0")
+                          nil
+                        '((overlay-arrow . hollow-right-triangle))))
+                (setq gud-overlay-arrow-position (make-marker))
+                (set-marker gud-overlay-arrow-position position))))))))
+  
 (defvar gdb-prompt-name-regexp "value=\"\\(.*?\\)\"")
 
 (defun gdb-get-prompt ()
