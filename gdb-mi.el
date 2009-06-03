@@ -1827,10 +1827,11 @@ FILE is a full path."
 
 (def-gdb-auto-update-trigger gdb-invalidate-disassembly
   (gdb-get-buffer-create 'gdb-disassembly-buffer)
-  (let ((file (file-name-nondirectory
-               (or gdb-selected-file gdb-main-file)))
+  (let ((file (or gdb-selected-file gdb-main-file))
         (line (or gdb-selected-line 1)))
-    (format "-data-disassemble -f %s -l %d -n -1 -- 0\n" file line))
+    (if file
+        (format "-data-disassemble -f %s -l %d -n -1 -- 0\n" file line)
+      ""))
   gdb-disassembly-handler)
 
 (defvar gdb-disassembly-font-lock-keywords
