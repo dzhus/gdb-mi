@@ -29,9 +29,14 @@
          
          `-data-disassemble` command needs filename and line
          information, which can be learned from GDB with
-         `-stack-info-frame` command. Probably, new variables similar
-         to `gdb-pc-address` should be introduced. Currently the code
-         relies on `gud-last-last-frame` variable.
+         `-stack-info-frame` command. The code currently relies on
+         *global* variables `gdb-selected-file` and
+         `gdb-selected-line`, both set in `gdb-frame-handler`.
+
+   - [ ] breakpoints
+
+   - [ ] do not update disassembly buffer if the current function
+         hasn't changed since last operation
          
    - [ ] keymap
          
