@@ -1162,7 +1162,6 @@ static char *magick[] = {
   (gdb-get-changed-registers)
   (gdb-invalidate-registers)
   (gdb-invalidate-locals)
-  (gdb-invalidate-disassembly)
   (when (and (boundp 'speedbar-frame) (frame-live-p speedbar-frame))
     (dolist (var gdb-var-list)
       (setcar (nthcdr 5 var) nil))
@@ -2435,7 +2434,8 @@ is set in them."
                           nil
                         '((overlay-arrow . hollow-right-triangle))))
                 (setq gud-overlay-arrow-position (make-marker))
-                (set-marker gud-overlay-arrow-position position))))))))
+                (set-marker gud-overlay-arrow-position position)))))
+      (gdb-invalidate-disassembly))))
   
 (defvar gdb-prompt-name-regexp "value=\"\\(.*?\\)\"")
 
