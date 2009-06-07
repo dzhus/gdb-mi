@@ -1,6 +1,6 @@
 ;;; gdb-mi.el --- User Interface for running GDB
 
-;; Author: Nick Roberts <nickrob@gnu.org>
+;; Author: Nick Roberts <nickrob@gnu.org>, Dmitry Dzhus <dima@sphinx.net.ru>
 ;; Maintainer: Nick Roberts <nickrob@gnu.org>
 ;; Keywords: unix, tools
 
@@ -46,6 +46,8 @@
 ;; This mode will PARTLY WORK WITH RECENT GDB RELEASES (status in modeline
 ;; doesn't update properly when execution commands are issued from GUD buffer)
 ;; and WORKS BEST when GDB runs asynchronously: maint set linux-async on.
+;;
+;; You need development version of GDB 7.0 for this code to work properly.
 
 ;; This file replaces gdb-ui.el and is for development with GDB.  Use the
 ;; release branch of Emacs 22 for the latest version of gdb-ui.el.
@@ -72,16 +74,16 @@
 ;;   3) Use cygwin-mount.el
 
 ;;; Known Bugs:
+
 ;; 1) Stack buffer doesn't parse MI output if you stop in a routine without
 ;;    line information, e.g., a routine in libc (just a TODO item).
 
 ;; TODO:
 ;; 1) Use MI command -data-read-memory for memory window.
-;; 2) Use MI command -data-disassemble for disassembly window.
-;; 3) Use MI command -threads-info for threads window.
-;; 4) Watch windows to work with threads.
-;; 5) Use treebuffer.el instead of the speedbar for watch-expressions?
-;; 6) Mark breakpoint locations on scroll-bar of source buffer?
+;; 2) Watch windows to work with threads.
+;; 3) Use treebuffer.el instead of the speedbar for watch-expressions?
+;; 4) Mark breakpoint locations on scroll-bar of source buffer?
+
 ;;; Code:
 
 (require 'gud)
