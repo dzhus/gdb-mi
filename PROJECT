@@ -8,10 +8,16 @@
 ** DONE Write `gdb-def-frame-for-buffer`
    To define `gdb-frame-*-buffer` functions
   
-** TODO Write `gdb-def-display-buffer`
+** DONE Write `gdb-def-display-buffer`
+   CLOSED: [2009-06-03 Срд]
    To define `gdb-display-*-buffer` functions
   
-  
+* Broken glass
+** TODO gdb-display-locals-buffer
+   Undefined
+** TODO gdb-many-windows
+   Broken
+   
 * Object approach
 ** Rewrite existing buffers
 *** IN PROGRESS Frames list handler
@@ -44,6 +50,9 @@
 
          Add clickable buttons for `jmp`, `jl` arguments
    
+** TODO Data memory
+   - [ ] basic information
+   - [ ] keymap
 
 * GDB+Emacs interface improvements
    
