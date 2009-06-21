@@ -904,10 +904,11 @@ DOC is an optional documentation string."
   "Define a function NAME which shows gdb BUFFER.
 
 DOC is an optional documentation string."
-  `(defun name ()
+  `(defun ,name ()
+     ,(when doc doc)
      (interactive)
      (gdb-display-buffer
-      (gdb-get-buffer-create ,name) t)))
+      (gdb-get-buffer-create ,buffer) t)))
 
 ;;
 ;; This assoc maps buffer type symbols to rules.  Each rule is a list of

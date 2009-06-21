@@ -9,7 +9,7 @@
    To define `gdb-frame-*-buffer` functions
   
 ** DONE Write `gdb-def-display-buffer`
-   CLOSED: [2009-06-03 Срд]
+   CLOSED: [2009-06-21 Вск 18:33]
    To define `gdb-display-*-buffer` functions
   
 * Broken glass
