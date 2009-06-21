@@ -13,6 +13,8 @@
    To define `gdb-display-*-buffer` functions
   
 
+** IN PROGRESS Use `gdb-auto-update-handler`/`gdb-auto-updated-buffer` more
+
 ** TODO Use `def-gdb-auto-update-handler`
    See also gdb-ui.el for `def-gdb-auto-updated-buffer`
 * Broken glass

@@ -1434,6 +1434,11 @@ are not guaranteed."
 	   (push ',name gdb-pending-triggers)))))
 
 (defmacro def-gdb-auto-update-handler (name trigger buf-key custom-defun)
+  "Define a handler NAME for TRIGGER acting in BUF-KEY with CUSTOM-DEFUN.
+
+Delete TRIGGER from `gdb-pending-triggers', switch to gdb BUF-KEY
+buffer using `gdb-get-buffer', erase it and evalueat
+CUSTOM-DEFUN."
   `(defun ,name ()
      (setq gdb-pending-triggers
       (delq ',trigger
@@ -1444,14 +1449,30 @@ are not guaranteed."
 	      (let* ((window (get-buffer-window buf 0))
 		     (start (window-start window))
 		     (p (window-point window))
-		    (buffer-read-only nil))
+                     (buffer-read-only nil))
 		(erase-buffer)
-		(insert-buffer-substring (gdb-get-buffer-create
-					  'gdb-partial-output-buffer))
 		(set-window-start window start)
-		(set-window-point window p)))))
-     ;; put customisation here
-     (,custom-defun)))
+		(set-window-point window p)
+                (,custom-defun)))))))
+
+(defmacro def-gdb-auto-updated-buffer (buf-key
+				       trigger-name gdb-command
+				       output-handler-name custom-defun)
+  "Define a trigger and its handler for buffers of type BUF-KEY.
+
+TRIGGER-NAME trigger is defined to send GDB-COMMAND if BUF-KEY
+exists.
+
+OUTPUT-HANDLER-NAME handler uses customization of CUSTOM-DEFUN."
+  `(progn
+     (def-gdb-auto-update-trigger ,trigger-name
+       ;; The demand predicate:
+       (gdb-get-buffer ',buf-key)
+       ,gdb-command
+       ,output-handler-name)
+     (def-gdb-auto-update-handler ,output-handler-name
+       ,trigger-name ,buf-key ,custom-defun)))
+
 
 
 ;; Breakpoint buffer : This displays the output of `-break-list'.
@@ -1754,16 +1775,20 @@ FILE is a full path."
                       'gdb-threads-buffer-name
                       'gdb-threads-mode)
 
-(def-gdb-auto-update-trigger gdb-invalidate-threads
-  (gdb-get-buffer-create 'gdb-threads-buffer)
-  "-thread-info\n"
-  gdb-thread-list-handler)
+(def-gdb-auto-updated-buffer gdb-threads-buffer
+  gdb-invalidate-threads "-thread-info\n"
+  gdb-thread-list-handler gdb-thread-list-handler-custom)
+
 
 (defvar gdb-threads-font-lock-keywords
   '(("in \\([^ ]+\\) ("  (1 font-lock-function-name-face))
     (" \\(stopped\\) in "  (1 font-lock-warning-face))
     ("\\(\\(\\sw\\|[_.]\\)+\\)="  (1 font-lock-variable-name-face)))
   "Font lock keywords used in `gdb-threads-mode'.")
+
+(defvar gdb-threads-mode-map
+  ;; TODO
+  (make-sparse-keymap))
 
 (defun gdb-threads-mode ()
   "Major mode for GDB threads.
@@ -1781,31 +1806,20 @@ FILE is a full path."
   (run-mode-hooks 'gdb-threads-mode-hook)
   'gdb-invalidate-threads)
 
-(defvar gdb-threads-mode-map
-  ;; TODO
-  (make-sparse-keymap))
-
-(defun gdb-thread-list-handler ()
-  (setq gdb-pending-triggers (delq 'gdb-invalidate-threads
-                                   gdb-pending-triggers))
+(defun gdb-thread-list-handler-custom ()
   (let* ((res (json-partial-output))
-         (threads-list (fadr-q "res.threads"))
-         (buf (gdb-get-buffer 'gdb-threads-buffer)))
-    (and buf
-         (with-current-buffer buf
-           (let ((buffer-read-only nil))
-             (erase-buffer)
-             (dolist (thread threads-list)
-               (insert (fadr-format "~.id (~.target-id) ~.state in ~.frame.func " thread))
-               ;; Arguments
-               (insert "(")
-               (let ((args (fadr-q "thread.frame.args")))
-                 (dolist (arg args)
-                   (insert (fadr-format "~.name=~.value," arg)))
-                 (when args (kill-backward-chars 1)))
-               (insert ")")
-               (gdb-insert-frame-location (fadr-q "thread.frame"))
-               (insert (fadr-format " at ~.frame.addr\n" thread))))))))
+         (threads-list (fadr-q "res.threads")))
+    (dolist (thread threads-list)
+      (insert (fadr-format "~.id (~.target-id) ~.state in ~.frame.func " thread))
+      ;; Arguments
+      (insert "(")
+      (let ((args (fadr-q "thread.frame.args")))
+        (dolist (arg args)
+          (insert (fadr-format "~.name=~.value," arg)))
+        (when args (kill-backward-chars 1)))
+      (insert ")")
+      (gdb-insert-frame-location (fadr-q "thread.frame"))
+      (insert (fadr-format " at ~.frame.addr\n" thread)))))
 
 
 ;;; Memory view
@@ -1842,6 +1856,12 @@ FILE is a full path."
       ""))
   gdb-disassembly-handler)
 
+(def-gdb-auto-update-handler
+  gdb-disassembly-handler
+  gdb-invalidate-disassembly
+  gdb-disassembly-buffer
+  gdb-disassembly-handler-custom)
+
 (defvar gdb-disassembly-font-lock-keywords
   '(;; <__function.name+n>
     ("<\\(\\(\\sw\\|[_.]\\)+\\)\\(\\+[0-9]+\\)?>"
@@ -1876,22 +1896,14 @@ FILE is a full path."
   (run-mode-hooks 'gdb-disassembly-mode-hook)
   'gdb-invalidate-disassembly)
 
-(defun gdb-disassembly-handler ()
-  (setq gdb-pending-triggers (delq 'gdb-invalidate-disassembly
-                                   gdb-pending-triggers))
+(defun gdb-disassembly-handler-custom ()
   (let* ((res (json-partial-output))
-         (instructions (fadr-member res ".asm_insns"))
-         (buf (gdb-get-buffer 'gdb-disassembly-buffer)))
-    (and buf
-         (with-current-buffer buf
-           (let ((buffer-read-only nil))
-             (erase-buffer)
-             (dolist (instr instructions)
-               (insert (fadr-format "~.address <~.func-name+~.offset>:\t~.inst\n" instr))))))))
+         (instructions (fadr-member res ".asm_insns")))
+    (dolist (instr instructions)
+      (insert (fadr-format "~.address <~.func-name+~.offset>:\t~.inst\n" instr)))))
 
 
 ;;; Breakpoints view
-
 (defvar gdb-breakpoints-header
  `(,(propertize "Breakpoints"
 		'help-echo "mouse-1: select"
