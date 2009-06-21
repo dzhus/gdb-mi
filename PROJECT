@@ -43,6 +43,10 @@
          *global* variables `gdb-selected-file` and
          `gdb-selected-line`, both set in `gdb-frame-handler`.
 
+   - [ ] alignment sucks
+
+         Add more tabs after `<function_name+offset>:`?
+
    - [ ] breakpoints
 
    - [ ] do not update disassembly buffer if the current function
