@@ -69,7 +69,9 @@
    - [ ] keymap
 
 * GDB+Emacs interface improvements
-   
+* Overall UI improvements
+** TODO Improve `gdb-jump-to`
+
 * Multiple threads support
 ** TODO Buffer model review
    Several new concepts for GDB buffers must be introduced:
