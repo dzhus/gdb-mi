@@ -889,7 +889,7 @@ The key should be one of the cars in `gdb-buffer-rules-assoc'."
 
 ;; Used to define all gdb-frame-*-buffer functions except
 ;; `gdb-frame-separate-io-buffer'
-(defmacro gdb-def-frame-for-buffer (name buffer &optional doc)
+(defmacro def-gdb-frame-for-buffer (name buffer &optional doc)
   "Define a function NAME which shows gdb BUFFER in a separate frame.
 
 DOC is an optional documentation string."
@@ -900,7 +900,7 @@ DOC is an optional documentation string."
            (special-display-frame-alist gdb-frame-parameters))
        (display-buffer (gdb-get-buffer-create ,buffer)))))
 
-(defmacro gdb-def-display-buffer (name buffer &optional doc)
+(defmacro def-gdb-display-buffer (name buffer &optional doc)
   "Define a function NAME which shows gdb BUFFER.
 
 DOC is an optional documentation string."
@@ -1689,12 +1689,12 @@ If not in a source or disassembly buffer just set point."
   (with-current-buffer gud-comint-buffer
     (concat "*breakpoints of " (gdb-get-target-string) "*")))
 
-(gdb-def-display-buffer
+(def-gdb-display-buffer
  gdb-display-breakpoints-buffer
  'gdb-breakpoints-buffer
  "Display status of user-settable breakpoints.")
 
-(gdb-def-frame-for-buffer
+(def-gdb-frame-for-buffer
  gdb-frame-breakpoints-buffer
  'gdb-breakpoints-buffer
  "Display status of user-settable breakpoints in a new frame.")
@@ -1761,12 +1761,12 @@ FILE is a full path."
 (defun gdb-threads-buffer-name ()
   (concat "*threads of " (gdb-get-target-string) "*"))
 
-(gdb-def-display-buffer
+(def-gdb-display-buffer
  gdb-display-threads-buffer
  'gdb-threads-buffer
  "Display GDB threads.")
 
-(gdb-def-frame-for-buffer
+(def-gdb-frame-for-buffer
  gdb-frame-threads-buffer
  'gdb-threads-buffer
  "Display GDB threads in a new frame.")
@@ -1833,12 +1833,12 @@ FILE is a full path."
 (defun gdb-disassembly-buffer-name ()
   (concat "*disassembly of " (gdb-get-target-string) "*"))
 
-(gdb-def-display-buffer
+(def-gdb-display-buffer
  gdb-display-disassembly-buffer
  'gdb-disassembly-buffer
  "Display disassembly for current stack frame.")
 
-(gdb-def-frame-for-buffer
+(def-gdb-frame-for-buffer
  gdb-frame-disassembly-buffer
  'gdb-disassembly-buffer
  "Display disassembly in a new frame.")
@@ -2070,12 +2070,12 @@ FILE is a full path."
   (with-current-buffer gud-comint-buffer
     (concat "*stack frames of " (gdb-get-target-string) "*")))
 
-(gdb-def-display-buffer
+(def-gdb-display-buffer
  gdb-display-stack-buffer
  'gdb-stack-buffer
  "Display backtrace of current stack.")
 
-(gdb-def-frame-for-buffer
+(def-gdb-frame-for-buffer
  gdb-frame-stack-buffer
  'gdb-stack-buffer
  "Display backtrace of current stack in a new frame.")
@@ -2265,12 +2265,12 @@ FILE is a full path."
   (with-current-buffer gud-comint-buffer
     (concat "*locals of " (gdb-get-target-string) "*")))
 
-(gdb-def-display-buffer
+(def-gdb-display-buffer
  gdb-display-locals-buffer
  'gdb-locals-buffer
  "Display local variables of current stack and their values.")
 
-(gdb-def-frame-for-buffer
+(def-gdb-frame-for-buffer
  gdb-frame-locals-buffer
  'gdb-locals-buffer
  "Display local variables of current stack and their values in a new frame.")
@@ -2361,12 +2361,12 @@ FILE is a full path."
   (with-current-buffer gud-comint-buffer
     (concat "*registers of " (gdb-get-target-string) "*")))
 
-(gdb-def-display-buffer
+(def-gdb-display-buffer
  gdb-display-registers-buffer
  'gdb-registers-buffer
  "Display integer register contents.")
 
-(gdb-def-frame-for-buffer
+(def-gdb-frame-for-buffer
  gdb-frame-registers-buffer
  'gdb-registers-buffer
   "Display integer register contents in a new frame.")
