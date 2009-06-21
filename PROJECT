@@ -12,6 +12,9 @@
    CLOSED: [2009-06-21 Вск 18:33]
    To define `gdb-display-*-buffer` functions
   
+
+** TODO Use `def-gdb-auto-update-handler`
+   See also gdb-ui.el for `def-gdb-auto-updated-buffer`
 * Broken glass
 ** DONE gdb-display-locals-buffer
    CLOSED: [2009-06-21 Вск 17:51]
@@ -44,6 +47,12 @@
 
    - [ ] do not update disassembly buffer if the current function
          hasn't changed since last operation
+
+   - [ ] disassemble function around point, not just the current one
+
+         To achieve this, I'll need to extend
+         `gdb-disassembly-handler` with optional argument for target
+         buffer to put disassembly data in
          
    - [ ] keymap
          
