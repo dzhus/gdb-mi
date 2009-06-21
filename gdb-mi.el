@@ -1804,7 +1804,7 @@ FILE is a full path."
                    (insert (fadr-format "~.name=~.value," arg)))
                  (when args (kill-backward-chars 1)))
                (insert ")")
-               (insert-frame-location (fadr-q "thread.frame"))
+               (gdb-insert-frame-location (fadr-q "thread.frame"))
                (insert (fadr-format " at ~.frame.addr\n" thread))))))))
 
 
@@ -2001,7 +2001,7 @@ FILE is a full path."
   "-stack-list-frames\n"
   gdb-stack-list-frames-handler)
 
-(defun insert-frame-location (frame)
+(defun gdb-insert-frame-location (frame)
   "Insert \"file:line\" button or library name for FRAME object."
   (let ((file (fadr-q "frame.fullname"))
         (line (fadr-q "frame.line"))
@@ -2027,7 +2027,7 @@ FILE is a full path."
                (erase-buffer)
                (dolist (frame (nreverse stack))
                  (insert (fadr-expand "~.level in ~.func" frame))
-                 (insert-frame-location frame)
+                 (gdb-insert-frame-location frame)
                  (newline))
                (gdb-stack-list-frames-custom)))))))
 
