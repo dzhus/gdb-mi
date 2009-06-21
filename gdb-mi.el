@@ -2253,7 +2253,7 @@ FILE is a full path."
     (concat "*locals of " (gdb-get-target-string) "*")))
 
 (gdb-def-display-buffer
- gdb-display-local-buffer
+ gdb-display-locals-buffer
  'gdb-locals-buffer
  "Display local variables of current stack and their values.")
 

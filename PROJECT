@@ -13,7 +13,8 @@
    To define `gdb-display-*-buffer` functions
   
 * Broken glass
-** TODO gdb-display-locals-buffer
+** DONE gdb-display-locals-buffer
+   CLOSED: [2009-06-21 Вск 17:51]
    Undefined
 ** TODO gdb-many-windows
    Broken
