@@ -21,9 +21,29 @@
 ;;; Commentary:
 
 ;; This code allows accessing data stored in recursive association and
-;; plain lists using a compact notation.
+;; plain lists using a compact notation. Such structures are called
+;; objects in this code.
 ;;
-;; Consider the following list:
+;; An object is a constant, an association list or a plain list:
+;; 
+;; OBJECT = ASSOC-LIST | LIST | CONSTANT
+;;
+;; Values of association lists and plain lists are in their turn other
+;; objects.
+;;
+;; We access data stored in objects by specifying its path within an
+;; object. The following notation is used:
+;;
+;; - a dot followed by a key name to get respective association list value
+;;
+;; - a positive integer number in square brackets to access plain list value
+;;
+;; Such selectors may be concatenated to access deeply stored data.
+;;
+;; Primary interface to using such objects is `fadr-member'. The rest
+;; of this commentary provides usage examples.
+;;
+;; Consider the following object:
 ;; 
 ;;     (setq basket '((apples . (((color . green) (taste . delicious)) ((color . red) (taste . disgusting))))))
 ;;
@@ -35,7 +55,7 @@
 ;; Associated values are selected using a dot followed by a key, while
 ;; lists accept an index (0-based) in square brackets.
 ;;
-;; `fadr-q' is a one-argument shortcut fro `fadr-member', where
+;; `fadr-q' is a one-argument shortcut for `fadr-member', where
 ;; (fadr-q "res.path") results to (fadr-member res ".path"):
 ;;
 ;;     (fadr-q "basket.apples[0].taste")
@@ -121,6 +141,15 @@ wrap a call to it with `save-match-data'."
             (t (error "Bad path"))))))
 
 (defun fadr-q (full-path)
+  "Shorthand for `fadr-member'.
+
+For example,
+
+    (fadr-q \"foo.bar\") 
+
+is the same as 
+
+    (fadr-member foo \".bar\")"
   (catch 'bad-path
     (if (string-match fadr-path-regexp full-path)
         (if (not (= (match-beginning 0) 0))
@@ -131,7 +160,9 @@ wrap a call to it with `save-match-data'."
       (throw 'bad-path (error "Incorrect path")))))
 
 (defun fadr-peel-path (path)
-  "Return PATH without first selector."
+  "Return PATH without first selector.
+
+"
   (cond ((fadr-field-select path)
          (string-match (bol-regexp fadr-field-selector-regexp) path))
         ((fadr-index-select path)
