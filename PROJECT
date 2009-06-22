@@ -102,10 +102,11 @@
 ** TODO Stack information
    There must be some way to examine stack info for different threads
 
-* Stack information handling                                       :redesign:
+* IN PROGRESS Stack information handling                           :redesign:
   `gdb-frame-handler` is not robust. Must think of how should gdb-mi
-  act when we stop in a routine w/o line info (don't set
-  `gud-last-frame`?)  
+  act when we stop in a routine w/o line info. Currently we simply
+  don't reset `gud-last-frame` in this case. Disassembly buffer falls
+  back to displaying `main` as `gdb-selected-file` gets nil.
 
 * Black corners
   Unclear parts of code which I don't fully understand yet.

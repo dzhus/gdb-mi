@@ -2433,9 +2433,10 @@ is set in them."
       (setq gdb-selected-file (fadr-q "frame.fullname"))
       (let ((line (fadr-q "frame.line")))
         (setq gdb-selected-line (or (and line (string-to-number line))
-                                    nil))) ; don't fail if line is nil
-      (setq gud-last-frame (cons gdb-selected-file gdb-selected-line))
-      (gud-display-frame)
+                                    nil)) ; don't fail if line is nil
+        (when line ; obey the current file only if we have line info
+          (setq gud-last-frame (cons gdb-selected-file gdb-selected-line))
+          (gud-display-frame)))
       (if (gdb-get-buffer 'gdb-locals-buffer)
           (with-current-buffer (gdb-get-buffer 'gdb-locals-buffer)
             (setq mode-name (concat "Locals:" gdb-selected-frame))))
