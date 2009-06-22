@@ -1884,7 +1884,7 @@ FILE is a full path."
         (dolist (row memory)
           (insert (concat (fadr-q "row.addr") ": "))
           (dolist (column (fadr-q "row.data"))
-            (insert (concat column " ")))
+            (insert (concat column "\t")))
           (newline)))
       (progn
         (let ((gdb-memory-address gdb-memory-previous-address))
@@ -2023,6 +2023,25 @@ DOC is an optional documentation string."
   (customize-set-variable 'gdb-memory-unit 1)
   (gdb-invalidate-memory))
 
+(defmacro def-gdb-memory-show-page (name address-var &optional doc)
+  "Define a function NAME which show new address in memory buffer.
+
+The defined function switches Memory buffer to show address
+stored in ADDRESS-VAR variable.
+
+DOC is an optional documentation string."
+  `(defun ,name
+     ,(when doc doc)
+     (interactive)
+     (let ((gdb-memory-address ,address-var))
+       (gdb-invalidate-memory))))
+
+(def-gdb-memory-show-page gdb-memory-show-previous-page
+  gdb-memory-prev-page)
+
+(def-gdb-memory-show-page gdb-memory-show-next-page
+  gdb-memory-next-page)
+
 (defvar gdb-memory-unit-map
   (let ((map (make-sparse-keymap)))
     (define-key map [header-line down-mouse-3] 'gdb-memory-unit-menu-1)
@@ -2034,16 +2053,16 @@ DOC is an optional documentation string."
 
 (define-key gdb-memory-unit-menu [giantwords]
   '(menu-item "Giant words" gdb-memory-unit-giant
-	      :button (:radio . (equal gdb-memory-unit "g"))))
+	      :button (:radio . (equal gdb-memory-unit 8))))
 (define-key gdb-memory-unit-menu [words]
   '(menu-item "Words" gdb-memory-unit-word
-	      :button (:radio . (equal gdb-memory-unit "w"))))
+	      :button (:radio . (equal gdb-memory-unit 4))))
 (define-key gdb-memory-unit-menu [halfwords]
   '(menu-item "Halfwords" gdb-memory-unit-halfword
-	      :button (:radio . (equal gdb-memory-unit "h"))))
+	      :button (:radio . (equal gdb-memory-unit 2))))
 (define-key gdb-memory-unit-menu [bytes]
   '(menu-item "Bytes" gdb-memory-unit-byte
-	      :button (:radio . (equal gdb-memory-unit "b"))))
+	      :button (:radio . (equal gdb-memory-unit 1))))
 
 (defun gdb-memory-unit-menu (event)
   (interactive "@e")
@@ -2084,9 +2103,7 @@ corresponding to the mode line clicked."
                   'mouse-face 'mode-line-highlight
                   'local-map (gdb-make-header-line-mouse-map
                               'mouse-1
-                              (lambda () (interactive)
-                                (let ((gdb-memory-address gdb-memory-prev-page))
-                                  (gdb-invalidate-memory)))))
+                              #'gdb-memory-show-previous-page))
      "|"
      (propertize "+"
                   'face font-lock-warning-face
@@ -2094,9 +2111,7 @@ corresponding to the mode line clicked."
                  'mouse-face 'mode-line-highlight
                  'local-map (gdb-make-header-line-mouse-map
                              'mouse-1
-                             (lambda () (interactive)
-                               (let ((gdb-memory-address gdb-memory-next-page))
-                                 (gdb-invalidate-memory)))))
+                             #'gdb-memory-show-next-page))
     "]: "
     (propertize gdb-memory-address
                  'face font-lock-warning-face
