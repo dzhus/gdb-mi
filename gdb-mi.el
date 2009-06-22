@@ -1826,11 +1826,17 @@ FILE is a full path."
 
 ;;; Memory view
 
-(defcustom gdb-memory-repeat-count 32
-  "Number of data items in memory window."
+(defcustom gdb-memory-rows 8
+  "Number of data rows in memory window."
   :type 'integer
   :group 'gud
-  :version "22.1")
+  :version "23.2")
+
+(defcustom gdb-memory-columns 4
+  "Number of data columns in memory window."
+  :type 'integer
+  :group 'gud
+  :version "23.2")
 
 (defcustom gdb-memory-format "x"
   "Display format of data items in memory window."
@@ -1849,7 +1855,7 @@ FILE is a full path."
 		 (const :tag "Word" 4)
 		 (const :tag "Giant word" 8))
   :group 'gud
-  :version "23.2") ; TODO bump needed?
+  :version "23.2")
 
 (gdb-set-buffer-rules 'gdb-memory-buffer
 		      'gdb-memory-buffer-name
@@ -1857,11 +1863,12 @@ FILE is a full path."
 
 (def-gdb-auto-updated-buffer gdb-memory-buffer
   gdb-invalidate-memory
-  (format "-data-read-memory %s %s %d %d 1\n" 
+  (format "-data-read-memory %s %s %d %d %d\n" 
           gdb-memory-address
           gdb-memory-format
           gdb-memory-unit
-          gdb-memory-repeat-count)
+          gdb-memory-rows
+          gdb-memory-columns)
   gdb-read-memory-handler
   gdb-read-memory-custom)
 
@@ -1899,17 +1906,31 @@ FILE is a full path."
       (setq gdb-memory-address arg))
     (gdb-invalidate-memory)))
 
-(defun gdb-memory-set-repeat-count (event)
-  "Set the number of data items in memory window."
-  (interactive "e")
-  (save-selected-window
-    (select-window (posn-window (event-start event)))
-    (let* ((arg (read-from-minibuffer "Repeat count: "))
-	  (count (string-to-number arg)))
-      (if (<= count 0)
-	  (error "Positive numbers only")
-	(customize-set-variable 'gdb-memory-repeat-count count)
-	(gdb-invalidate-memory)))))
+(defmacro def-gdb-set-positive-number (name variable echo-string &optional doc)
+  "Define a function NAME which reads new VAR value from minibuffer."
+  `(defun ,name (event)
+     ,(when doc doc)
+     (interactive "e")
+     (save-selected-window
+       (select-window (posn-window (event-start event)))
+       (let* ((arg (read-from-minibuffer ,echo-string))
+              (count (string-to-number arg)))
+         (if (<= count 0)
+             (error "Positive number only")
+           (customize-set-variable ',variable count)
+           (gdb-invalidate-memory))))))
+
+(def-gdb-set-positive-number
+  gdb-memory-set-rows
+  gdb-memory-rows
+  "Rows: "
+  "Set the number of data rows in memory window.")
+
+(def-gdb-set-positive-number
+  gdb-memory-set-columns
+  gdb-memory-columns
+  "Columns: "
+  "Set the number of data columns in memory window.")
 
 (defmacro def-gdb-memory-format (name format doc)
   "Define a function NAME to switch memory buffer to use FORMAT.
@@ -2084,14 +2105,22 @@ corresponding to the mode line clicked."
                  'local-map (gdb-make-header-line-mouse-map
                              'mouse-1
                              #'gdb-memory-set-address))
-    "  Repeat Count: "
-    (propertize (number-to-string gdb-memory-repeat-count)
+    "  Rows: "
+    (propertize (number-to-string gdb-memory-rows)
                  'face font-lock-warning-face
-                 'help-echo "mouse-1: set repeat count"
+                 'help-echo "mouse-1: set number of columns"
                  'mouse-face 'mode-line-highlight
                  'local-map (gdb-make-header-line-mouse-map
                              'mouse-1
-                             #'gdb-memory-set-repeat-count))
+                             #'gdb-memory-set-rows))
+    "  Columns: "
+    (propertize (number-to-string gdb-memory-columns)
+                 'face font-lock-warning-face
+                 'help-echo "mouse-1: set number of columns"
+                 'mouse-face 'mode-line-highlight
+                 'local-map (gdb-make-header-line-mouse-map
+                             'mouse-1
+                             #'gdb-memory-set-columns))
     "  Display Format: "
     (propertize gdb-memory-format
                  'face font-lock-warning-face
