@@ -1901,35 +1901,34 @@ FILE is a full path."
 	(customize-set-variable 'gdb-memory-repeat-count count)
 	(gdb-invalidate-memory)))))
 
-(defun gdb-memory-format-binary ()
-  "Set the display format to binary."
-  (interactive)
-  (customize-set-variable 'gdb-memory-format "t")
-  (gdb-invalidate-memory))
+(defmacro def-gdb-memory-format (name format doc)
+  "Define a function NAME to switch memory buffer to use FORMAT.
 
-(defun gdb-memory-format-octal ()
-  "Set the display format to octal."
-  (interactive)
-  (customize-set-variable 'gdb-memory-format "o")
-  (gdb-invalidate-memory))
+DOC is an optional documentation string."
+  `(defun ,name () ,(when doc doc)
+     (interactive)
+     (customize-set-variable 'gdb-memory-format ,format)
+     (gdb-invalidate-memory)))
 
-(defun gdb-memory-format-unsigned ()
-  "Set the display format to unsigned decimal."
-  (interactive)
-  (customize-set-variable 'gdb-memory-format "u")
-  (gdb-invalidate-memory))
+(def-gdb-memory-format
+  gdb-memory-format-binary "t"
+  "Set the display format to binary.")
 
-(defun gdb-memory-format-signed ()
-  "Set the display format to decimal."
-  (interactive)
-  (customize-set-variable 'gdb-memory-format "d")
-  (gdb-invalidate-memory))
+(def-gdb-memory-format
+  gdb-memory-format-octal "o"
+  "Set the display format to octal.")
 
-(defun gdb-memory-format-hexadecimal ()
-  "Set the display format to hexadecimal."
-  (interactive)
-  (customize-set-variable 'gdb-memory-format "x")
-  (gdb-invalidate-memory))
+(def-gdb-memory-format
+  gdb-memory-format-unsigned "u"
+  "Set the display format to unsigned decimal.")
+
+(def-gdb-memory-format
+  gdb-memory-format-signed "d"
+  "Set the display format to decimal.")
+
+(def-gdb-memory-format
+  gdb-memory-format-hexadecimal "x"
+  "Set the display format to hexadecimal.")
 
 (defvar gdb-memory-format-map
   (let ((map (make-sparse-keymap)))
