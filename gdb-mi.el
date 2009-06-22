@@ -1868,6 +1868,7 @@ FILE is a full path."
 (defun gdb-read-memory-custom ()
   (let* ((res (json-partial-output))
          (memory (fadr-q "res.memory")))
+    (setq gdb-memory-address (fadr-q "res.addr"))
     (dolist (row memory)
       (insert (concat (fadr-q "row.addr") ": "))
       (dolist (column (fadr-q "row.data"))
