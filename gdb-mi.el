@@ -2063,11 +2063,10 @@ corresponding to the mode line clicked."
   (with-current-buffer gud-comint-buffer
     (concat "*memory of " (gdb-get-target-string) "*")))
 
-(defun gdb-display-memory-buffer ()
-  "Display memory contents."
-  (interactive)
-  (gdb-display-buffer
-   (gdb-get-buffer-create 'gdb-memory-buffer) t))
+(def-gdb-display-buffer
+  gdb-display-memory-buffer
+  'gdb-memory-buffer
+  "Display memory contents.")
 
 (defun gdb-frame-memory-buffer ()
   "Display memory contents in a new frame."
