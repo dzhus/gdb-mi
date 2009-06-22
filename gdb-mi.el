@@ -2454,7 +2454,8 @@ is set in them."
                         '((overlay-arrow . hollow-right-triangle))))
                 (setq gud-overlay-arrow-position (make-marker))
                 (set-marker gud-overlay-arrow-position position)))))
-      (gdb-invalidate-disassembly))))
+      (when gdb-selected-line
+            (gdb-invalidate-disassembly)))))
   
 (defvar gdb-prompt-name-regexp "value=\"\\(.*?\\)\"")
 

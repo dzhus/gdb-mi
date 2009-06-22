@@ -108,6 +108,17 @@
   don't reset `gud-last-frame` in this case. Disassembly buffer falls
   back to displaying `main` as `gdb-selected-file` gets nil.
 
+  When line information for top frame is unavailable, it's reasonable
+  to make gdb-mi obey the highest of frames which have line:
+
+  For example:
+
+  2 in start_thread of /lib/libpthread.so.0
+  1 in hello of hello.c:8 <-- we should display this frame
+  0 in printf of /lib/libc.so.6
+
+  The same applies to disassembly buffer.
+
 * Black corners
   Unclear parts of code which I don't fully understand yet.
 ** gud-last-frame
