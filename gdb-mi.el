@@ -1867,13 +1867,22 @@ FILE is a full path."
 
 (defun gdb-read-memory-custom ()
   (let* ((res (json-partial-output))
-         (memory (fadr-q "res.memory")))
-    (setq gdb-memory-address (fadr-q "res.addr"))
-    (dolist (row memory)
-      (insert (concat (fadr-q "row.addr") ": "))
-      (dolist (column (fadr-q "row.data"))
-        (insert (concat column " ")))
-      (newline))))
+         (err-msg (fadr-q "res.msg")))
+    (if (not err-msg)
+      (let ((memory (fadr-q "res.memory")))
+        (setq gdb-memory-address (fadr-q "res.addr"))
+        (setq gdb-memory-next-page (fadr-q "res.next-page"))
+        (setq gdb-memory-prev-page (fadr-q "res.prev-page"))
+        (setq gdb-memory-previous-address gdb-memory-address)
+        (dolist (row memory)
+          (insert (concat (fadr-q "row.addr") ": "))
+          (dolist (column (fadr-q "row.data"))
+            (insert (concat column " ")))
+          (newline)))
+      (progn
+        (let ((gdb-memory-address gdb-memory-previous-address))
+          (gdb-invalidate-memory)
+          (error err-msg))))))
 
 (defvar gdb-memory-mode-map
   (let ((map (make-sparse-keymap)))
@@ -2044,6 +2053,59 @@ corresponding to the mode line clicked."
     )
   "Font lock keywords used in `gdb-memory-mode'.")
 
+(defvar gdb-memory-header
+  '(:eval
+    (concat
+     "Start address["
+     (propertize "-"
+                  'face font-lock-warning-face
+                  'help-echo "mouse-1: decrement address"
+                  'mouse-face 'mode-line-highlight
+                  'local-map (gdb-make-header-line-mouse-map
+                              'mouse-1
+                              (lambda () (interactive)
+                                (let ((gdb-memory-address gdb-memory-prev-page))
+                                  (gdb-invalidate-memory)))))
+     "|"
+     (propertize "+"
+                  'face font-lock-warning-face
+                  'help-echo "mouse-1: increment address"
+                 'mouse-face 'mode-line-highlight
+                 'local-map (gdb-make-header-line-mouse-map
+                             'mouse-1
+                             (lambda () (interactive)
+                               (let ((gdb-memory-address gdb-memory-next-page))
+                                 (gdb-invalidate-memory)))))
+    "]: "
+    (propertize gdb-memory-address
+                 'face font-lock-warning-face
+                 'help-echo "mouse-1: set start address"
+                 'mouse-face 'mode-line-highlight
+                 'local-map (gdb-make-header-line-mouse-map
+                             'mouse-1
+                             #'gdb-memory-set-address))
+    "  Repeat Count: "
+    (propertize (number-to-string gdb-memory-repeat-count)
+                 'face font-lock-warning-face
+                 'help-echo "mouse-1: set repeat count"
+                 'mouse-face 'mode-line-highlight
+                 'local-map (gdb-make-header-line-mouse-map
+                             'mouse-1
+                             #'gdb-memory-set-repeat-count))
+    "  Display Format: "
+    (propertize gdb-memory-format
+                 'face font-lock-warning-face
+                 'help-echo "mouse-3: select display format"
+                 'mouse-face 'mode-line-highlight
+                 'local-map gdb-memory-format-map)
+    "  Unit Size: "
+    (propertize (number-to-string gdb-memory-unit)
+                 'face font-lock-warning-face
+                 'help-echo "mouse-3: select unit size"
+                 'mouse-face 'mode-line-highlight
+                 'local-map gdb-memory-unit-map)))
+  "Header line used in `gdb-memory-mode'.")
+
 (defun gdb-memory-mode ()
   "Major mode for examining memory.
 
@@ -2051,9 +2113,9 @@ corresponding to the mode line clicked."
   (kill-all-local-variables)
   (setq major-mode 'gdb-memory-mode)
   (setq mode-name "Memory")
-  (setq buffer-read-only t)
   (use-local-map gdb-memory-mode-map)
-;  (setq header-line-format gdb-memory-header)
+  (setq buffer-read-only t)
+  (setq header-line-format gdb-memory-header)
   (set (make-local-variable 'font-lock-defaults)
        '(gdb-memory-font-lock-keywords))
   (run-mode-hooks 'gdb-memory-mode-hook)
