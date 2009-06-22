@@ -95,6 +95,7 @@
 
 (defvar gdb-pc-address nil "Initialization for Assembler buffer.
 Set to \"main\" at start if `gdb-show-main' is t.")
+(defvar	gdb-memory-address "main")
 (defvar gdb-selected-frame nil)
 (defvar gdb-selected-file nil)
 (defvar gdb-selected-line nil)
@@ -1174,6 +1175,7 @@ static char *magick[] = {
   (gdb-get-changed-registers)
   (gdb-invalidate-registers)
   (gdb-invalidate-locals)
+  (gdb-invalidate-memory)
   (when (and (boundp 'speedbar-frame) (frame-live-p speedbar-frame))
     (dolist (var gdb-var-list)
       (setcar (nthcdr 5 var) nil))
@@ -1823,10 +1825,260 @@ FILE is a full path."
 
 
 ;;; Memory view
-(defun gdb-todo-memory ()
+
+(defcustom gdb-memory-repeat-count 32
+  "Number of data items in memory window."
+  :type 'integer
+  :group 'gud
+  :version "22.1")
+
+(defcustom gdb-memory-format "x"
+  "Display format of data items in memory window."
+  :type '(choice (const :tag "Hexadecimal" "x")
+	 	 (const :tag "Signed decimal" "d")
+	 	 (const :tag "Unsigned decimal" "u")
+		 (const :tag "Octal" "o")
+		 (const :tag "Binary" "t"))
+  :group 'gud
+  :version "22.1")
+
+(defcustom gdb-memory-unit 4
+  "Unit size of data items in memory window."
+  :type '(choice (const :tag "Byte" 1)
+		 (const :tag "Halfword" 2)
+		 (const :tag "Word" 4)
+		 (const :tag "Giant word" 8))
+  :group 'gud
+  :version "23.2") ; TODO bump needed?
+
+(gdb-set-buffer-rules 'gdb-memory-buffer
+		      'gdb-memory-buffer-name
+		      'gdb-memory-mode)
+
+(def-gdb-auto-updated-buffer gdb-memory-buffer
+  gdb-invalidate-memory
+  (format "-data-read-memory %s %s %d %d 1\n" 
+          gdb-memory-address
+          gdb-memory-format
+          gdb-memory-unit
+          gdb-memory-repeat-count)
+  gdb-read-memory-handler
+  gdb-read-memory-custom)
+
+(defun gdb-read-memory-custom ()
+  (let* ((res (json-partial-output))
+         (memory (fadr-q "res.memory")))
+    (dolist (row memory)
+      (insert (concat (fadr-q "row.addr") ": "))
+      (dolist (column (fadr-q "row.data"))
+        (insert (concat column " ")))
+      (newline))))
+
+(defvar gdb-memory-mode-map
+  (let ((map (make-sparse-keymap)))
+    (suppress-keymap map)
+    (define-key map "q" 'kill-this-buffer)
+     map))
+
+(defun gdb-memory-set-address (event)
+  "Set the start memory address."
+  (interactive "e")
+  (save-selected-window
+    (select-window (posn-window (event-start event)))
+    (let ((arg (read-from-minibuffer "Memory address: ")))
+      (setq gdb-memory-address arg))
+    (gdb-invalidate-memory)))
+
+(defun gdb-memory-set-repeat-count (event)
+  "Set the number of data items in memory window."
+  (interactive "e")
+  (save-selected-window
+    (select-window (posn-window (event-start event)))
+    (let* ((arg (read-from-minibuffer "Repeat count: "))
+	  (count (string-to-number arg)))
+      (if (<= count 0)
+	  (error "Positive numbers only")
+	(customize-set-variable 'gdb-memory-repeat-count count)
+	(gdb-invalidate-memory)))))
+
+(defun gdb-memory-format-binary ()
+  "Set the display format to binary."
   (interactive)
-  (message-box
-   "TODO: Implement memory buffer using\nMI command -data-read-memory"))
+  (customize-set-variable 'gdb-memory-format "t")
+  (gdb-invalidate-memory))
+
+(defun gdb-memory-format-octal ()
+  "Set the display format to octal."
+  (interactive)
+  (customize-set-variable 'gdb-memory-format "o")
+  (gdb-invalidate-memory))
+
+(defun gdb-memory-format-unsigned ()
+  "Set the display format to unsigned decimal."
+  (interactive)
+  (customize-set-variable 'gdb-memory-format "u")
+  (gdb-invalidate-memory))
+
+(defun gdb-memory-format-signed ()
+  "Set the display format to decimal."
+  (interactive)
+  (customize-set-variable 'gdb-memory-format "d")
+  (gdb-invalidate-memory))
+
+(defun gdb-memory-format-hexadecimal ()
+  "Set the display format to hexadecimal."
+  (interactive)
+  (customize-set-variable 'gdb-memory-format "x")
+  (gdb-invalidate-memory))
+
+(defvar gdb-memory-format-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map [header-line down-mouse-3] 'gdb-memory-format-menu-1)
+    map)
+  "Keymap to select format in the header line.")
+
+(defvar gdb-memory-format-menu (make-sparse-keymap "Format")
+  "Menu of display formats in the header line.")
+
+(define-key gdb-memory-format-menu [binary]
+  '(menu-item "Binary" gdb-memory-format-binary
+	      :button (:radio . (equal gdb-memory-format "t"))))
+(define-key gdb-memory-format-menu [octal]
+  '(menu-item "Octal" gdb-memory-format-octal
+	      :button (:radio . (equal gdb-memory-format "o"))))
+(define-key gdb-memory-format-menu [unsigned]
+  '(menu-item "Unsigned Decimal" gdb-memory-format-unsigned
+	      :button (:radio . (equal gdb-memory-format "u"))))
+(define-key gdb-memory-format-menu [signed]
+  '(menu-item "Signed Decimal" gdb-memory-format-signed
+	      :button (:radio . (equal gdb-memory-format "d"))))
+(define-key gdb-memory-format-menu [hexadecimal]
+  '(menu-item "Hexadecimal" gdb-memory-format-hexadecimal
+	      :button (:radio . (equal gdb-memory-format "x"))))
+
+(defun gdb-memory-format-menu (event)
+  (interactive "@e")
+  (x-popup-menu event gdb-memory-format-menu))
+
+(defun gdb-memory-format-menu-1 (event)
+  (interactive "e")
+  (save-selected-window
+    (select-window (posn-window (event-start event)))
+    (let* ((selection (gdb-memory-format-menu event))
+	   (binding (and selection (lookup-key gdb-memory-format-menu
+					       (vector (car selection))))))
+      (if binding (call-interactively binding)))))
+
+(defun gdb-memory-unit-giant ()
+  "Set the unit size to giant words (eight bytes)."
+  (interactive)
+  (customize-set-variable 'gdb-memory-unit 8)
+  (gdb-invalidate-memory))
+
+(defun gdb-memory-unit-word ()
+  "Set the unit size to words (four bytes)."
+  (interactive)
+  (customize-set-variable 'gdb-memory-unit 4)
+  (gdb-invalidate-memory))
+
+(defun gdb-memory-unit-halfword ()
+  "Set the unit size to halfwords (two bytes)."
+  (interactive)
+  (customize-set-variable 'gdb-memory-unit 2)
+  (gdb-invalidate-memory))
+
+(defun gdb-memory-unit-byte ()
+  "Set the unit size to bytes."
+  (interactive)
+  (customize-set-variable 'gdb-memory-unit 1)
+  (gdb-invalidate-memory))
+
+(defvar gdb-memory-unit-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map [header-line down-mouse-3] 'gdb-memory-unit-menu-1)
+    map)
+  "Keymap to select units in the header line.")
+
+(defvar gdb-memory-unit-menu (make-sparse-keymap "Unit")
+  "Menu of units in the header line.")
+
+(define-key gdb-memory-unit-menu [giantwords]
+  '(menu-item "Giant words" gdb-memory-unit-giant
+	      :button (:radio . (equal gdb-memory-unit "g"))))
+(define-key gdb-memory-unit-menu [words]
+  '(menu-item "Words" gdb-memory-unit-word
+	      :button (:radio . (equal gdb-memory-unit "w"))))
+(define-key gdb-memory-unit-menu [halfwords]
+  '(menu-item "Halfwords" gdb-memory-unit-halfword
+	      :button (:radio . (equal gdb-memory-unit "h"))))
+(define-key gdb-memory-unit-menu [bytes]
+  '(menu-item "Bytes" gdb-memory-unit-byte
+	      :button (:radio . (equal gdb-memory-unit "b"))))
+
+(defun gdb-memory-unit-menu (event)
+  (interactive "@e")
+  (x-popup-menu event gdb-memory-unit-menu))
+
+(defun gdb-memory-unit-menu-1 (event)
+  (interactive "e")
+  (save-selected-window
+    (select-window (posn-window (event-start event)))
+    (let* ((selection (gdb-memory-unit-menu event))
+	   (binding (and selection (lookup-key gdb-memory-unit-menu
+					       (vector (car selection))))))
+      (if binding (call-interactively binding)))))
+
+;;from make-mode-line-mouse-map
+(defun gdb-make-header-line-mouse-map (mouse function) "\
+Return a keymap with single entry for mouse key MOUSE on the header line.
+MOUSE is defined to run function FUNCTION with no args in the buffer
+corresponding to the mode line clicked."
+  (let ((map (make-sparse-keymap)))
+    (define-key map (vector 'header-line mouse) function)
+    (define-key map (vector 'header-line 'down-mouse-1) 'ignore)
+    map))
+
+(defvar gdb-memory-font-lock-keywords
+  '(;; <__function.name+n>
+    ("<\\(\\(\\sw\\|[_.]\\)+\\)\\(\\+[0-9]+\\)?>" (1 font-lock-function-name-face))
+    )
+  "Font lock keywords used in `gdb-memory-mode'.")
+
+(defun gdb-memory-mode ()
+  "Major mode for examining memory.
+
+\\{gdb-memory-mode-map}"
+  (kill-all-local-variables)
+  (setq major-mode 'gdb-memory-mode)
+  (setq mode-name "Memory")
+  (setq buffer-read-only t)
+  (use-local-map gdb-memory-mode-map)
+;  (setq header-line-format gdb-memory-header)
+  (set (make-local-variable 'font-lock-defaults)
+       '(gdb-memory-font-lock-keywords))
+  (run-mode-hooks 'gdb-memory-mode-hook)
+  'gdb-invalidate-memory)
+
+(defun gdb-memory-buffer-name ()
+  (with-current-buffer gud-comint-buffer
+    (concat "*memory of " (gdb-get-target-string) "*")))
+
+(defun gdb-display-memory-buffer ()
+  "Display memory contents."
+  (interactive)
+  (gdb-display-buffer
+   (gdb-get-buffer-create 'gdb-memory-buffer) t))
+
+(defun gdb-frame-memory-buffer ()
+  "Display memory contents in a new frame."
+  (interactive)
+  (let* ((special-display-regexps (append special-display-regexps '(".*")))
+	 (special-display-frame-alist
+	  (cons '(left-fringe . 0)
+		(cons '(right-fringe . 0)
+		      (cons '(width . 83) gdb-frame-parameters)))))
+    (display-buffer (gdb-get-buffer-create 'gdb-memory-buffer))))
+
 
 ;;; Disassembly view
 
