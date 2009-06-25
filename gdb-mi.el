@@ -1900,8 +1900,22 @@ FILE is a full path."
 
 (defvar gdb-memory-mode-map
   (let ((map (make-sparse-keymap)))
-    (suppress-keymap map)
+    (suppress-keymap map t)
     (define-key map "q" 'kill-this-buffer)
+    (define-key map "n" 'gdb-memory-show-next-page)
+    (define-key map "p" 'gdb-memory-show-previous-page)
+    (define-key map "a" 'gdb-memory-set-address)
+    (define-key map "t" 'gdb-memory-format-binary)
+    (define-key map "o" 'gdb-memory-format-octal)
+    (define-key map "u" 'gdb-memory-format-unsigned)
+    (define-key map "d" 'gdb-memory-format-signed)
+    (define-key map "x" 'gdb-memory-format-hexadecimal)
+    (define-key map "b" 'gdb-memory-unit-byte)
+    (define-key map "h" 'gdb-memory-unit-halfword)
+    (define-key map "w" 'gdb-memory-unit-word)
+    (define-key map "g" 'gdb-memory-unit-giant)
+    (define-key map "R" 'gdb-memory-set-rows)
+    (define-key map "C" 'gdb-memory-set-columns)
      map))
 
 (defun gdb-memory-set-address (event)

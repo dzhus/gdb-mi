@@ -75,7 +75,7 @@
    
 ** TODO Program memory                                                  :new:
    - [X] basic information
-   - [ ] keymap
+   - [X] keymap
    - [X] header
          
    - [ ] show function name instead of just address
