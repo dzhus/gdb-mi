@@ -96,6 +96,13 @@
 (defvar gdb-pc-address nil "Initialization for Assembler buffer.
 Set to \"main\" at start if `gdb-show-main' is t.")
 (defvar	gdb-memory-address "main")
+(defvar	gdb-memory-last-address nil
+  "Last successfully accessed memory address.")
+(defvar	gdb-memory-next-page nil
+  "Address of next memory page for program memory buffer.")
+(defvar	gdb-memory-prev-page nil
+  "Address of previous memory page for program memory buffer.")
+
 (defvar gdb-selected-frame nil)
 (defvar gdb-selected-file nil)
 (defvar gdb-selected-line nil)
@@ -1880,14 +1887,14 @@ FILE is a full path."
         (setq gdb-memory-address (fadr-q "res.addr"))
         (setq gdb-memory-next-page (fadr-q "res.next-page"))
         (setq gdb-memory-prev-page (fadr-q "res.prev-page"))
-        (setq gdb-memory-previous-address gdb-memory-address)
+        (setq gdb-memory-last-address gdb-memory-address)
         (dolist (row memory)
           (insert (concat (fadr-q "row.addr") ": "))
           (dolist (column (fadr-q "row.data"))
             (insert (concat column "\t")))
           (newline)))
       (progn
-        (let ((gdb-memory-address gdb-memory-previous-address))
+        (let ((gdb-memory-address gdb-memory-last-address))
           (gdb-invalidate-memory)
           (error err-msg))))))
 
