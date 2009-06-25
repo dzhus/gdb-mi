@@ -73,7 +73,7 @@
 
          Add clickable buttons for `jmp`, `jl` arguments
    
-** TODO Data memory                                                     :new:
+** TODO Program memory                                                  :new:
    - [X] basic information
    - [ ] keymap
    - [X] header
