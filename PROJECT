@@ -21,12 +21,12 @@
 
 ** TODO Use `def-gdb-auto-update-handler`
    See also gdb-ui.el for `def-gdb-auto-updated-buffer`
-
+   
 * Broken glass
 ** DONE gdb-display-locals-buffer
    CLOSED: [2009-06-21 Вск 17:51]
    Undefined
-** TODO gdb-many-windows
+** DONE gdb-many-windows
    Broken
    
 * Object approach
@@ -74,16 +74,20 @@
          Add clickable buttons for `jmp`, `jl` arguments
    
 ** TODO Data memory                                                     :new:
-   - [ ] basic information
+   - [X] basic information
    - [ ] keymap
+   - [X] header
+         
+   - [ ] show function name instead of just address
+         
+         MI does not provide function name in `-data-read-memory` output =\
 
 * GDB+Emacs interface improvements
 
 * Overall UI improvements                                                :ui:
 ** TODO Improve `gdb-jump-to`
    See also `gud-display-line` for implementation ideas
-** TODO Think of a better header
-   This applies to other buffers as well
+** TODO Headers
 
 * Multiple threads support                                         :redesign:
 ** TODO Buffer model review
