@@ -87,6 +87,7 @@
 
 (require 'gud)
 (require 'json)
+(require 'bindat)
 
 (defvar tool-bar-map)
 (defvar speedbar-initial-expansion-list-name)
