@@ -2212,9 +2212,10 @@ corresponding to the mode line clicked."
   (interactive)
   (let* ((special-display-regexps (append special-display-regexps '(".*")))
 	 (special-display-frame-alist
-	  (cons '(left-fringe . 0)
-		(cons '(right-fringe . 0)
-		      (cons '(width . 83) gdb-frame-parameters)))))
+	  `((left-fringe . 0)
+            (right-fringe . 0)
+            (width . 83) 
+            ,@gdb-frame-parameters)))
     (display-buffer (gdb-get-buffer-create 'gdb-memory-buffer))))
 
 
