@@ -1932,7 +1932,7 @@ FILE is a full path."
   (interactive "e")
   (save-selected-window
     (select-window (posn-window (event-start event)))
-    (gdb-memory-set-address-1)))
+    (gdb-memory-set-address)))
 
 ;; Non-event version for use within keymap
 (defun gdb-memory-set-address ()
