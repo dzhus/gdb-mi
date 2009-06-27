@@ -2884,8 +2884,7 @@ is set in them."
 		:visible (eq gud-minor-mode 'gdbmi)))
   (define-key menu [gdb] '("Gdb" . gdb-display-gdb-buffer))
   (define-key menu [threads] '("Threads" . gdb-display-threads-buffer))
-;  (define-key menu [memory] '("Memory" . gdb-display-memory-buffer))
-  (define-key menu [memory] '("Memory" . gdb-todo-memory))
+  (define-key menu [memory] '("Memory" . gdb-display-memory-buffer))
   (define-key menu [disassembly]
     '("Disassembly" . gdb-display-assembler-buffer))
   (define-key menu [registers] '("Registers" . gdb-display-registers-buffer))
@@ -2903,8 +2902,7 @@ is set in them."
 		:visible (eq gud-minor-mode 'gdbmi)))
   (define-key menu [gdb] '("Gdb" . gdb-frame-gdb-buffer))
   (define-key menu [threads] '("Threads" . gdb-frame-threads-buffer))
-;  (define-key menu [memory] '("Memory" . gdb-frame-memory-buffer))
-  (define-key menu [memory] '("Memory" . gdb-todo-memory))
+  (define-key menu [memory] '("Memory" . gdb-frame-memory-buffer))
   (define-key menu [disassembly] '("Disassembly" . gdb-frame-assembler-buffer))
   (define-key menu [registers] '("Registers" . gdb-frame-registers-buffer))
   (define-key menu [inferior]
