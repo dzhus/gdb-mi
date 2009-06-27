@@ -37,7 +37,8 @@
 *** DONE Abandon fadr
     CLOSED: [2009-06-27 Сбт]
     Use `bindat-get-field` instead.
-*** TODO Breakpoints
+*** DONE Breakpoints
+    CLOSED: [2009-06-28 Вск 00:44]
     Rewrite `gdb-break-list-handler` using `gdb-get-field`. Introduce
     new variable `gdb-break-list` with all breakpoints data to avoid
     reparsing breakpoints buffer every time we need to add breakpoint
@@ -135,4 +136,5 @@
   Unclear parts of code which I don't fully understand yet.
 ** gud-last-frame
 ** gdb-pending-triggers
+** Why call ignored `list` command in `gdb-place-breakpoints`?
 
