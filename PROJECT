@@ -58,7 +58,7 @@
 
    - [ ] breakpoints
 
-   - [ ] overlay arrow
+   - [X] overlay arrow
 
    - [ ] do not update disassembly buffer if the current function
          hasn't changed since last operation

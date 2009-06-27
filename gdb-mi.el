@@ -2278,6 +2278,9 @@ corresponding to the mode line clicked."
   (kill-all-local-variables)
   (setq major-mode 'gdb-disassembly-mode)
   (setq mode-name "Disassembly")
+  (add-to-list 'overlay-arrow-variable-list 'gdb-overlay-arrow-position)
+  (setq fringes-outside-margins t)
+  (setq gdb-overlay-arrow-position (make-marker))
   (use-local-map gdb-disassembly-mode-map)
   (setq buffer-read-only t)
   (buffer-disable-undo)
@@ -2290,6 +2293,15 @@ corresponding to the mode line clicked."
   (let* ((res (json-partial-output))
          (instructions (gdb-get-field res 'asm_insns)))
     (dolist (instr instructions)
+      ;; Put overlay arrow
+      (when (string-equal (gdb-get-field instr 'address)
+                          gdb-pc-address)
+        (progn
+          (setq fringe-indicator-alist
+                (if (string-equal gdb-frame-number "0")
+                    nil
+                  '((overlay-arrow . hollow-right-triangle))))
+          (set-marker gdb-overlay-arrow-position (point))))
       (insert (apply 'format `("%s <%s+%s>:\t%s\n" 
                                ,@(gdb-get-many-fields instr 'address 'func-name 'offset 'inst)))))))
 
