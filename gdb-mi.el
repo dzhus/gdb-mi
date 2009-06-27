@@ -364,7 +364,7 @@ detailed description of this mode.
   (run-hooks 'gdb-mode-hook))
 
 (defun gdb-init-1 ()
-  (gud-def gud-break (if (not (string-equal mode-name "Machine"))
+  (gud-def gud-break (if (not (string-equal mode-name "Disassembly"))
 			 (gud-call "break %f:%l" arg)
 		       (save-excursion
 			 (beginning-of-line)
@@ -372,7 +372,7 @@ detailed description of this mode.
 			 (gud-call "break *%a" arg)))
 	   "\C-b" "Set breakpoint at current line or address.")
   ;;
-  (gud-def gud-remove (if (not (string-equal mode-name "Machine"))
+  (gud-def gud-remove (if (not (string-equal mode-name "Disassembly"))
 			  (gud-call "clear %f:%l" arg)
 			(save-excursion
 			  (beginning-of-line)
@@ -380,7 +380,7 @@ detailed description of this mode.
 			  (gud-call "clear *%a" arg)))
 	   "\C-d" "Remove breakpoint at current line or address.")
   ;;
-  (gud-def gud-until  (if (not (string-equal mode-name "Machine"))
+  (gud-def gud-until  (if (not (string-equal mode-name "Disassembly"))
 			  (gud-call "-exec-until %f:%l" arg)
 			(save-excursion
 			  (beginning-of-line)
@@ -1187,6 +1187,7 @@ static char *magick[] = {
   (gdb-get-changed-registers)
   (gdb-invalidate-registers)
   (gdb-invalidate-locals)
+  (gdb-invalidate-disassembly)
   (gdb-invalidate-memory)
   (when (and (boundp 'speedbar-frame) (frame-live-p speedbar-frame))
     (dolist (var gdb-var-list)
@@ -1623,7 +1624,7 @@ If not in a source or disassembly buffer just set point."
   (mouse-minibuffer-check event)
   (let ((posn (event-end event)))
     (with-selected-window (posn-window posn)
-      (if (or (buffer-file-name) (eq major-mode 'gdb-assembler-mode))
+      (if (or (buffer-file-name) (eq major-mode 'gdb-disassembly-mode))
 	  (if (numberp (posn-point posn))
 	      (save-excursion
 		(goto-char (posn-point posn))
@@ -2281,7 +2282,18 @@ corresponding to the mode line clicked."
                   '((overlay-arrow . hollow-right-triangle))))
           (set-marker gdb-overlay-arrow-position (point))))
       (insert (apply 'format `("%s <%s+%s>:\t%s\n" 
-                               ,@(gdb-get-many-fields instr 'address 'func-name 'offset 'inst)))))))
+                               ,@(gdb-get-many-fields instr 'address 'func-name 'offset 'inst))))))
+  (gdb-disassembly-place-breakpoints))
+
+(defun gdb-disassembly-place-breakpoints ()
+  (dolist (breakpoint gdb-breakpoints-list)
+    (let ((bptno (gdb-get-field breakpoint 'number))
+          (flag (gdb-get-field breakpoint 'enabled))
+          (address (gdb-get-field breakpoint 'addr)))
+      (save-excursion
+        (goto-char (point-min))
+        (if (re-search-forward (concat "^" address) nil t)
+            (gdb-put-breakpoint-icon (string-equal flag "y") bptno))))))
 
 
 ;;; Breakpoints view
