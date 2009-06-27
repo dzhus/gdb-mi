@@ -2035,29 +2035,26 @@ DOC is an optional documentation string."
 					       (vector (car selection))))))
       (if binding (call-interactively binding)))))
 
-(defun gdb-memory-unit-giant ()
-  "Set the unit size to giant words (eight bytes)."
-  (interactive)
-  (customize-set-variable 'gdb-memory-unit 8)
-  (gdb-invalidate-memory))
+(defmacro def-gdb-memory-unit (name unit-size doc)
+  "Define a function NAME to switch memory unit size to UNIT-SIZE.
 
-(defun gdb-memory-unit-word ()
-  "Set the unit size to words (four bytes)."
-  (interactive)
-  (customize-set-variable 'gdb-memory-unit 4)
-  (gdb-invalidate-memory))
+DOC is an optional documentation string."
+  `(defun ,name () ,(when doc doc)
+     (interactive)
+     (customize-set-variable 'gdb-memory-unit ,unit-size)
+     (gdb-invalidate-memory)))
 
-(defun gdb-memory-unit-halfword ()
-  "Set the unit size to halfwords (two bytes)."
-  (interactive)
-  (customize-set-variable 'gdb-memory-unit 2)
-  (gdb-invalidate-memory))
+(def-gdb-memory-unit gdb-memory-unit-giant 8
+  "Set the unit size to giant words (eight bytes).")
 
-(defun gdb-memory-unit-byte ()
-  "Set the unit size to bytes."
-  (interactive)
-  (customize-set-variable 'gdb-memory-unit 1)
-  (gdb-invalidate-memory))
+(def-gdb-memory-unit gdb-memory-unit-word 4
+  "Set the unit size to words (four bytes).")
+
+(def-gdb-memory-unit gdb-memory-unit-halfword 2
+  "Set the unit size to halfwords (two bytes).")
+
+(def-gdb-memory-unit gdb-memory-unit-byte 1
+  "Set the unit size to bytes.")
 
 (defmacro def-gdb-memory-show-page (name address-var &optional doc)
   "Define a function NAME which show new address in memory buffer.
