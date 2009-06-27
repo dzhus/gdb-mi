@@ -79,7 +79,6 @@
 ;;    line information, e.g., a routine in libc (just a TODO item).
 
 ;; TODO:
-;; 1) Use MI command -data-read-memory for memory window.
 ;; 2) Watch windows to work with threads.
 ;; 3) Use treebuffer.el instead of the speedbar for watch-expressions?
 ;; 4) Mark breakpoint locations on scroll-bar of source buffer?
@@ -1918,14 +1917,20 @@ FILE is a full path."
     (define-key map "C" 'gdb-memory-set-columns)
      map))
 
-(defun gdb-memory-set-address (event)
-  "Set the start memory address."
+(defun gdb-memory-set-address-event (event)
+  "Handle a click on address field in memory buffer header."
   (interactive "e")
   (save-selected-window
     (select-window (posn-window (event-start event)))
-    (let ((arg (read-from-minibuffer "Memory address: ")))
-      (setq gdb-memory-address arg))
-    (gdb-invalidate-memory)))
+    (gdb-memory-set-address-1)))
+
+;; Non-event version for use within keymap
+(defun gdb-memory-set-address ()
+  "Set the start memory address."
+  (interactive)
+  (let ((arg (read-from-minibuffer "Memory address: ")))
+    (setq gdb-memory-address arg))
+  (gdb-invalidate-memory))
 
 (defmacro def-gdb-set-positive-number (name variable echo-string &optional doc)
   "Define a function NAME which reads new VAR value from minibuffer."
@@ -2140,7 +2145,7 @@ corresponding to the mode line clicked."
                  'mouse-face 'mode-line-highlight
                  'local-map (gdb-make-header-line-mouse-map
                              'mouse-1
-                             #'gdb-memory-set-address))
+                             #'gdb-memory-set-address-event))
     "  Rows: "
     (propertize (number-to-string gdb-memory-rows)
                  'face font-lock-warning-face
