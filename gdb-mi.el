@@ -10,6 +10,8 @@
 ;; Version 0.6 from ELPA archive.
 ;; Use with gud.el from the same archive.
 
+;; Homepage: http://www.emacswiki.org/emacs/GDB-MI
+
 ;; GNU Emacs is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
 ;; the Free Software Foundation, either version 3 of the License, or
