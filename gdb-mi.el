@@ -7,7 +7,7 @@
 ;; Copyright (C) 2007, 2008, 2009 Free Software Foundation, Inc.
 
 ;; This file will become part of GNU Emacs.
-;; Version 0.5 from ELPA archive.
+;; Version 0.6 from ELPA archive.
 ;; Use with gud.el from the same archive.
 
 ;; GNU Emacs is free software: you can redistribute it and/or modify
@@ -47,7 +47,7 @@
 ;; doesn't update properly when execution commands are issued from GUD buffer)
 ;; and WORKS BEST when GDB runs asynchronously: maint set linux-async on.
 ;;
-;; You need development version of GDB 7.0 for this code to work properly.
+;; You need the DEVELOPMENT VERSION of GDB 7.0 for this code to work.
 
 ;; This file replaces gdb-ui.el and is for development with GDB.  Use the
 ;; release branch of Emacs 22 for the latest version of gdb-ui.el.
