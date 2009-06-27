@@ -1536,7 +1536,7 @@ OUTPUT-HANDLER-NAME handler uses customization of CUSTOM-DEFUN."
                           (propertize (gdb-get-field breakpoint 'func)
                                       'face font-lock-function-name-face)))
                  (gdb-insert-frame-location breakpoint)))
-              (at (insert at))
+              (at (insert (concat " " at)))
               (t (insert (gdb-get-field breakpoint 'original-location)))))
       (add-text-properties (line-beginning-position)
                            (line-end-position)
@@ -2348,6 +2348,7 @@ corresponding to the mode line clicked."
   "Enable/disable breakpoint at current line of breakpoints buffer."
   (interactive)
   (save-excursion
+    (beginning-of-line)
     (let ((breakpoint (get-text-property (point) 'gdb-breakpoint)))
       (if breakpoint
           (gud-basic-call
@@ -2360,11 +2361,13 @@ corresponding to the mode line clicked."
 (defun gdb-delete-breakpoint ()
   "Delete the breakpoint at current line of breakpoints buffer."
   (interactive)
+  (save-excursion
+  (beginning-of-line)
   (let ((breakpoint (get-text-property (point) 'gdb-breakpoint)))
     (if breakpoint
         (gud-basic-call (concat "-break-delete " (gdb-get-field breakpoint 'number)))
-      (error "Not recognized as break/watchpoint line"))))
-
+      (error "Not recognized as break/watchpoint line")))))
+  
 (defun gdb-goto-breakpoint (&optional event)
   "Go to the location of breakpoint at current line of
 breakpoints buffer."
@@ -2373,6 +2376,8 @@ breakpoints buffer."
   ;; Hack to stop gdb-goto-breakpoint displaying in GUD buffer.
   (let ((window (get-buffer-window gud-comint-buffer)))
     (if window (save-selected-window  (select-window window))))
+  (save-excursion
+  (beginning-of-line)
   (let ((breakpoint (get-text-property (point) 'gdb-breakpoint)))
     (if breakpoint
 	(let ((bptno (gdb-get-field breakpoint 'number))
@@ -2388,7 +2393,7 @@ breakpoints buffer."
 	      (with-current-buffer buffer
 		(goto-line (string-to-number line))
 		(set-window-point window (point))))))
-      (error "Not recognized as break/watchpoint line"))))
+      (error "Not recognized as break/watchpoint line")))))
 
 
 ;; Frames buffer.  This displays a perpetually correct bactrack trace.
