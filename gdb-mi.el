@@ -87,6 +87,7 @@
 
 (require 'gud)
 (require 'json)
+(require 'bindat)
 
 (defvar tool-bar-map)
 (defvar speedbar-initial-expansion-list-name)
@@ -1932,7 +1933,7 @@ FILE is a full path."
   (interactive "e")
   (save-selected-window
     (select-window (posn-window (event-start event)))
-    (gdb-memory-set-address-1)))
+    (gdb-memory-set-address)))
 
 ;; Non-event version for use within keymap
 (defun gdb-memory-set-address ()
@@ -2035,29 +2036,26 @@ DOC is an optional documentation string."
 					       (vector (car selection))))))
       (if binding (call-interactively binding)))))
 
-(defun gdb-memory-unit-giant ()
-  "Set the unit size to giant words (eight bytes)."
-  (interactive)
-  (customize-set-variable 'gdb-memory-unit 8)
-  (gdb-invalidate-memory))
+(defmacro def-gdb-memory-unit (name unit-size doc)
+  "Define a function NAME to switch memory unit size to UNIT-SIZE.
 
-(defun gdb-memory-unit-word ()
-  "Set the unit size to words (four bytes)."
-  (interactive)
-  (customize-set-variable 'gdb-memory-unit 4)
-  (gdb-invalidate-memory))
+DOC is an optional documentation string."
+  `(defun ,name () ,(when doc doc)
+     (interactive)
+     (customize-set-variable 'gdb-memory-unit ,unit-size)
+     (gdb-invalidate-memory)))
 
-(defun gdb-memory-unit-halfword ()
-  "Set the unit size to halfwords (two bytes)."
-  (interactive)
-  (customize-set-variable 'gdb-memory-unit 2)
-  (gdb-invalidate-memory))
+(def-gdb-memory-unit gdb-memory-unit-giant 8
+  "Set the unit size to giant words (eight bytes).")
 
-(defun gdb-memory-unit-byte ()
-  "Set the unit size to bytes."
-  (interactive)
-  (customize-set-variable 'gdb-memory-unit 1)
-  (gdb-invalidate-memory))
+(def-gdb-memory-unit gdb-memory-unit-word 4
+  "Set the unit size to words (four bytes).")
+
+(def-gdb-memory-unit gdb-memory-unit-halfword 2
+  "Set the unit size to halfwords (two bytes).")
+
+(def-gdb-memory-unit gdb-memory-unit-byte 1
+  "Set the unit size to bytes.")
 
 (defmacro def-gdb-memory-show-page (name address-var &optional doc)
   "Define a function NAME which show new address in memory buffer.
@@ -2215,9 +2213,10 @@ corresponding to the mode line clicked."
   (interactive)
   (let* ((special-display-regexps (append special-display-regexps '(".*")))
 	 (special-display-frame-alist
-	  (cons '(left-fringe . 0)
-		(cons '(right-fringe . 0)
-		      (cons '(width . 83) gdb-frame-parameters)))))
+	  `((left-fringe . 0)
+            (right-fringe . 0)
+            (width . 83) 
+            ,@gdb-frame-parameters)))
     (display-buffer (gdb-get-buffer-create 'gdb-memory-buffer))))
 
 
@@ -2281,6 +2280,9 @@ corresponding to the mode line clicked."
   (kill-all-local-variables)
   (setq major-mode 'gdb-disassembly-mode)
   (setq mode-name "Disassembly")
+  (add-to-list 'overlay-arrow-variable-list 'gdb-overlay-arrow-position)
+  (setq fringes-outside-margins t)
+  (setq gdb-overlay-arrow-position (make-marker))
   (use-local-map gdb-disassembly-mode-map)
   (setq buffer-read-only t)
   (buffer-disable-undo)
@@ -2293,6 +2295,15 @@ corresponding to the mode line clicked."
   (let* ((res (json-partial-output))
          (instructions (gdb-get-field res 'asm_insns)))
     (dolist (instr instructions)
+      ;; Put overlay arrow
+      (when (string-equal (gdb-get-field instr 'address)
+                          gdb-pc-address)
+        (progn
+          (setq fringe-indicator-alist
+                (if (string-equal gdb-frame-number "0")
+                    nil
+                  '((overlay-arrow . hollow-right-triangle))))
+          (set-marker gdb-overlay-arrow-position (point))))
       (insert (apply 'format `("%s <%s+%s>:\t%s\n" 
                                ,@(gdb-get-many-fields instr 'address 'func-name 'offset 'inst)))))))
 
@@ -2884,8 +2895,7 @@ is set in them."
 		:visible (eq gud-minor-mode 'gdbmi)))
   (define-key menu [gdb] '("Gdb" . gdb-display-gdb-buffer))
   (define-key menu [threads] '("Threads" . gdb-display-threads-buffer))
-;  (define-key menu [memory] '("Memory" . gdb-display-memory-buffer))
-  (define-key menu [memory] '("Memory" . gdb-todo-memory))
+  (define-key menu [memory] '("Memory" . gdb-display-memory-buffer))
   (define-key menu [disassembly]
     '("Disassembly" . gdb-display-assembler-buffer))
   (define-key menu [registers] '("Registers" . gdb-display-registers-buffer))
@@ -2903,8 +2913,7 @@ is set in them."
 		:visible (eq gud-minor-mode 'gdbmi)))
   (define-key menu [gdb] '("Gdb" . gdb-frame-gdb-buffer))
   (define-key menu [threads] '("Threads" . gdb-frame-threads-buffer))
-;  (define-key menu [memory] '("Memory" . gdb-frame-memory-buffer))
-  (define-key menu [memory] '("Memory" . gdb-todo-memory))
+  (define-key menu [memory] '("Memory" . gdb-frame-memory-buffer))
   (define-key menu [disassembly] '("Disassembly" . gdb-frame-assembler-buffer))
   (define-key menu [registers] '("Registers" . gdb-frame-registers-buffer))
   (define-key menu [inferior]
