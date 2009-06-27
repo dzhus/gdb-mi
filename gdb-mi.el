@@ -2822,7 +2822,7 @@ is set in them."
   (let ((frame (gdb-get-field (json-partial-output) 'frame)))
     (when frame
       (setq gdb-frame-number (gdb-get-field frame 'level))
-      (setq gdb-pc-address (gdb-get-field frame addr))
+      (setq gdb-pc-address (gdb-get-field frame 'addr))
       (setq gdb-selected-frame (gdb-get-field frame 'func))
       (setq gdb-selected-file (gdb-get-field frame 'fullname))
       (let ((line (gdb-get-field frame 'line)))
