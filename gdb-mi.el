@@ -1435,6 +1435,9 @@ are not guaranteed."
     (let ((json-array-type 'list))
       (json-read))))
 
+(defun gdb-pad-string (string padding)
+  (format (concat "%" (number-to-string padding) "s") string))
+
 (defalias 'gdb-get-field 'bindat-get-field)
 
 (defun gdb-get-many-fields (struct &rest fields)
@@ -1899,12 +1902,10 @@ in `gdb-memory-format'."
         (dolist (row memory)
           (insert (concat (gdb-get-field row 'addr) ": "))
           (dolist (column (gdb-get-field row 'data))
-            (insert (concat
-                     (format (concat "%" (number-to-string
-                                          (+ 2 (gdb-memory-column-width
-                                                gdb-memory-unit
-                                                gdb-memory-format))) "s")
-                             column))))
+            (insert (gdb-pad-string column
+                                    (+ 2 (gdb-memory-column-width
+                                          gdb-memory-unit
+                                          gdb-memory-format)))))
           (newline)))
       ;; Show last page instead of empty buffer when out of bounds
       (progn
@@ -2298,7 +2299,12 @@ corresponding to the mode line clicked."
 (defun gdb-disassembly-handler-custom ()
   (let* ((res (json-partial-output))
          (instructions (gdb-get-field res 'asm_insns)))
-    (dolist (instr instructions)
+    (let* ((last-instr (car (last instructions)))
+           (column-padding (+ 2 (string-width
+                                 (apply 'format
+                                        `("<%s+%s>:"
+                                          ,@(gdb-get-many-fields last-instr 'func-name 'offset)))))))
+      (dolist (instr instructions)
       ;; Put overlay arrow
       (when (string-equal (gdb-get-field instr 'address)
                           gdb-pc-address)
@@ -2308,9 +2314,15 @@ corresponding to the mode line clicked."
                     nil
                   '((overlay-arrow . hollow-right-triangle))))
           (set-marker gdb-overlay-arrow-position (point))))
-      (insert (apply 'format `("%s <%s+%s>:\t%s\n" 
-                               ,@(gdb-get-many-fields instr 'address 'func-name 'offset 'inst))))))
-  (gdb-disassembly-place-breakpoints))
+      (insert 
+       (concat
+        (gdb-get-field instr 'address)
+        " "
+        (gdb-pad-string (apply 'format `("<%s+%s>:"  ,@(gdb-get-many-fields instr 'func-name 'offset)))
+                        (- column-padding))
+        (gdb-get-field instr 'inst)
+        "\n")))
+      (gdb-disassembly-place-breakpoints))))
 
 (defun gdb-disassembly-place-breakpoints ()
   (dolist (breakpoint gdb-breakpoints-list)

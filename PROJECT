@@ -58,9 +58,7 @@
          `gdb-selected-line`, both set in `gdb-frame-handler`.
          See also [[Stack information handling]].
 
-   - [ ] alignment sucks
-
-         Add more tabs after `<function_name+offset>:`?
+   - [X] alignment
 
    - [X] breakpoints
 
@@ -82,6 +80,7 @@
    - [X] basic information
    - [X] keymap
    - [X] header
+   - [X] alignment
          
    - [ ] show function name instead of just address
          
