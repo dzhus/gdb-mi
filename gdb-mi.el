@@ -1867,6 +1867,26 @@ FILE is a full path."
   gdb-read-memory-handler
   gdb-read-memory-custom)
 
+(defun gdb-memory-column-width (size format)
+  "Return length of string with memory unit of SIZE in FORMAT.
+
+SIZE is in bytes, as in `gdb-memory-unit'. FORMAT is a string as
+in `gdb-memory-format'."
+  (let ((format-base (cdr (assoc format
+                                 '(("x" . 16)
+                                   ("d" . 10) ("u" . 10)
+                                   ("o" . 8)
+                                   ("t" . 2))))))
+    (if format-base
+        (let ((res (ceiling (log (expt 2.0 (* size 8)) format-base))))
+          (cond ((string-equal format "x")
+                 (+ 2 res)) ; hexadecimal numbers have 0x in front
+                ((or (string-equal format "d")
+                     (string-equal format "o"))
+                 (1+ res))
+                (t res)))
+      (error "Unknown format"))))
+
 (defun gdb-read-memory-custom ()
   (let* ((res (json-partial-output))
          (err-msg (gdb-get-field res 'msg)))
@@ -1879,7 +1899,12 @@ FILE is a full path."
         (dolist (row memory)
           (insert (concat (gdb-get-field row 'addr) ": "))
           (dolist (column (gdb-get-field row 'data))
-            (insert (concat column "\t")))
+            (insert (concat
+                     (format (concat "%" (number-to-string
+                                          (+ 2 (gdb-memory-column-width
+                                                gdb-memory-unit
+                                                gdb-memory-format))) "s")
+                             column))))
           (newline)))
       ;; Show last page instead of empty buffer when out of bounds
       (progn
