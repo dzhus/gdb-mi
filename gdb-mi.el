@@ -1481,7 +1481,8 @@ CUSTOM-DEFUN."
 		(erase-buffer)
 		(set-window-start window start)
 		(set-window-point window p)
-                (,custom-defun)))))))
+                (,custom-defun)
+                (goto-char (point-min))))))))
 
 (defmacro def-gdb-auto-updated-buffer (buf-key
 				       trigger-name gdb-command
