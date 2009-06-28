@@ -1901,7 +1901,7 @@ in `gdb-memory-format'."
           (setq gdb-memory-prev-page (gdb-get-field res 'prev-page))
           (setq gdb-memory-last-address gdb-memory-address)
         (dolist (row memory)
-          (insert (concat (gdb-get-field row 'addr) ": "))
+          (insert (concat (gdb-get-field row 'addr) ":"))
           (dolist (column (gdb-get-field row 'data))
             (insert (gdb-pad-string column
                                     (+ 2 (gdb-memory-column-width
