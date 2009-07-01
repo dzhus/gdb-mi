@@ -2326,6 +2326,7 @@ corresponding to the mode line clicked."
       (gdb-disassembly-place-breakpoints))))
 
 (defun gdb-disassembly-place-breakpoints ()
+  (gdb-remove-breakpoint-icons (point-min) (point-max))
   (dolist (breakpoint gdb-breakpoints-list)
     (let ((bptno (gdb-get-field breakpoint 'number))
           (flag (gdb-get-field breakpoint 'enabled))
