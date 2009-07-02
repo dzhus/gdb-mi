@@ -366,7 +366,7 @@ detailed description of this mode.
   (run-hooks 'gdb-mode-hook))
 
 (defun gdb-init-1 ()
-  (gud-def gud-break (if (not (string-equal mode-name "Disassembly"))
+  (gud-def gud-break (if (not (string-match "Disassembly" mode-name))
 			 (gud-call "break %f:%l" arg)
 		       (save-excursion
 			 (beginning-of-line)
@@ -374,7 +374,7 @@ detailed description of this mode.
 			 (gud-call "break *%a" arg)))
 	   "\C-b" "Set breakpoint at current line or address.")
   ;;
-  (gud-def gud-remove (if (not (string-equal mode-name "Disassembly"))
+  (gud-def gud-remove (if (not (string-match "Disassembly" mode-name))
 			  (gud-call "clear %f:%l" arg)
 			(save-excursion
 			  (beginning-of-line)
@@ -382,7 +382,7 @@ detailed description of this mode.
 			  (gud-call "clear *%a" arg)))
 	   "\C-d" "Remove breakpoint at current line or address.")
   ;;
-  (gud-def gud-until  (if (not (string-equal mode-name "Disassembly"))
+  (gud-def gud-until  (if (not (string-match "Disassembly" mode-name))
 			  (gud-call "-exec-until %f:%l" arg)
 			(save-excursion
 			  (beginning-of-line)
@@ -2877,7 +2877,7 @@ is set in them."
             (setq mode-name (concat "Locals:" gdb-selected-frame))))
       (if (gdb-get-buffer 'gdb-disassembly-buffer)
           (with-current-buffer (gdb-get-buffer 'gdb-disassembly-buffer)
-            (setq mode-name (concat "Machine:" gdb-selected-frame))))
+            (setq mode-name (concat "Disassembly:" gdb-selected-frame))))
       (if gud-overlay-arrow-position
           (let ((buffer (marker-buffer gud-overlay-arrow-position))
                 (position (marker-position gud-overlay-arrow-position)))
