@@ -1474,16 +1474,9 @@ CUSTOM-DEFUN."
      (let ((buf (gdb-get-buffer ',buf-key)))
        (and buf
 	    (with-current-buffer buf
-	      (let* ((window (get-buffer-window buf 0))
-		     (start (window-start window))
-		     (p (window-point window))
-                     (buffer-read-only nil))
+	      (let*((buffer-read-only nil))
 		(erase-buffer)
-                (save-excursion
-                  (,custom-defun))
-		(set-window-start window start)
-		(set-window-point window p)
-                ))))))
+                (,custom-defun)))))))
 
 (defmacro def-gdb-auto-updated-buffer (buf-key
 				       trigger-name gdb-command
@@ -2299,7 +2292,8 @@ corresponding to the mode line clicked."
 
 (defun gdb-disassembly-handler-custom ()
   (let* ((res (json-partial-output))
-         (instructions (gdb-get-field res 'asm_insns)))
+         (instructions (gdb-get-field res 'asm_insns))
+         (pos 1))
     (let* ((last-instr (car (last instructions)))
            (column-padding (+ 2 (string-width
                                  (apply 'format
@@ -2310,6 +2304,7 @@ corresponding to the mode line clicked."
       (when (string-equal (gdb-get-field instr 'address)
                           gdb-pc-address)
         (progn
+          (setq pos (point))
           (setq fringe-indicator-alist
                 (if (string-equal gdb-frame-number "0")
                     nil
@@ -2323,7 +2318,9 @@ corresponding to the mode line clicked."
                         (- column-padding))
         (gdb-get-field instr 'inst)
         "\n")))
-      (gdb-disassembly-place-breakpoints))))
+      (gdb-disassembly-place-breakpoints)
+      (let ((window (get-buffer-window (current-buffer) 0)))
+        (set-window-point window pos)))))
 
 (defun gdb-disassembly-place-breakpoints ()
   (gdb-remove-breakpoint-icons (point-min) (point-max))
