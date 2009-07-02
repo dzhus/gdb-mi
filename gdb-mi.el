@@ -1523,8 +1523,8 @@ OUTPUT-HANDLER-NAME handler uses customization of CUSTOM-DEFUN."
         (gdb-get-field breakpoint 'disp) "\t"
         (let ((flag (gdb-get-field breakpoint 'enabled)))
           (if (string-equal flag "y")
-              (propertize "on" 'face  font-lock-warning-face)
-            (propertize "off" 'face  font-lock-type-face))) "\t"
+              (propertize "y" 'face  font-lock-warning-face)
+            (propertize "n" 'face  font-lock-type-face))) "\t"
         (gdb-get-field breakpoint 'times) "\t"
         (gdb-get-field breakpoint 'addr)))
       (let ((at (gdb-get-field breakpoint 'at)))
