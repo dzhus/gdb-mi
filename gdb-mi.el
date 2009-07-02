@@ -1534,14 +1534,16 @@ OUTPUT-HANDLER-NAME handler uses customization of CUSTOM-DEFUN."
                   (concat " in "
                           (propertize (gdb-get-field breakpoint 'func)
                                       'face font-lock-function-name-face)))
-                 (gdb-insert-frame-location breakpoint)))
+                 (gdb-insert-frame-location breakpoint)
+                 (add-text-properties (line-beginning-position)
+                                      (line-end-position)
+                                      '(mouse-face highlight
+                                        help-echo "mouse-2, RET: visit breakpoint"))))
               (at (insert (concat " " at)))
               (t (insert (gdb-get-field breakpoint 'original-location)))))
       (add-text-properties (line-beginning-position)
                            (line-end-position)
-                           `(gdb-breakpoint ,breakpoint
-                             mouse-face highlight
-                             help-echo "mouse-2, RET: visit breakpoint"))
+                           `(gdb-breakpoint ,breakpoint))
       (newline))
     (gdb-place-breakpoints)))
 
