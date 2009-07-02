@@ -2247,12 +2247,11 @@ corresponding to the mode line clicked."
                       'gdb-disassembly-mode)
 
 (def-gdb-auto-update-trigger gdb-invalidate-disassembly
-  (gdb-get-buffer-create 'gdb-disassembly-buffer)
+  (gdb-get-buffer 'gdb-disassembly-buffer)
   (let ((file (or gdb-selected-file gdb-main-file))
         (line (or gdb-selected-line 1)))
-    (if file
-        (format "-data-disassemble -f %s -l %d -n -1 -- 0\n" file line)
-      ""))
+    (when (not file) (error "Disassembly invalidated with no file selected.")
+          (format "-data-disassemble -f %s -l %d -n -1 -- 0\n" file line)))
   gdb-disassembly-handler)
 
 (def-gdb-auto-update-handler
