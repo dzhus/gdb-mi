@@ -2250,8 +2250,8 @@ corresponding to the mode line clicked."
   (gdb-get-buffer 'gdb-disassembly-buffer)
   (let ((file (or gdb-selected-file gdb-main-file))
         (line (or gdb-selected-line 1)))
-    (when (not file) (error "Disassembly invalidated with no file selected.")
-          (format "-data-disassemble -f %s -l %d -n -1 -- 0\n" file line)))
+    (if (not file) (error "Disassembly invalidated with no file selected.")
+      (format "-data-disassemble -f %s -l %d -n -1 -- 0\n" file line)))
   gdb-disassembly-handler)
 
 (def-gdb-auto-update-handler
