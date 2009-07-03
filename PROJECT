@@ -44,9 +44,10 @@
     reparsing breakpoints buffer every time we need to add breakpoint
     icons on fringes etc.
 * New buffers
-** IN PROGRESS [2/3] Threads
+** DONE [3/3] Threads
+   CLOSED: [2009-07-03 Птн 21:20]
    - [X] basic information
-   - [ ] keymap
+   - [X] keymap
    - [X] current thread selection
 ** IN PROGRESS Disassembly
    - [X] basic information

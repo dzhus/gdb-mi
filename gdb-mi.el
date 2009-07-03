@@ -105,7 +105,15 @@ Set to \"main\" at start if `gdb-show-main' is t.")
   "Address of previous memory page for program memory buffer.")
 
 (defvar gdb-frame-number "0")
-(defvar gdb-thread-number "1")
+(defvar gdb-thread-number "1"
+  "Main current thread.
+
+Invalidation triggers use this variable to query GDB for
+information on the specified thread.
+
+This variable may be updated implicitly by GDB via
+`gdb-thread-list-handler-custom' or explicitly by
+`gdb-select-thread'.")
 
 (defvar gdb-selected-frame nil)
 (defvar gdb-selected-file nil)
@@ -1188,12 +1196,14 @@ Option value is taken from `gdb-thread-number'."
      (propertize "initializing..." 'face font-lock-variable-name-face))
     (gdb-init-1)
     (setq gdb-first-prompt nil))
+  ;; We may need to update gdb-thread-number, so we call threads buffer
+  (gdb-get-buffer-create 'gdb-threads-buffer)
+  (gdb-invalidate-threads)
   (gdb-get-selected-frame)
   (gdb-invalidate-frames)
   ;; Regenerate breakpoints buffer in case it has been inadvertantly deleted.
   (gdb-get-buffer-create 'gdb-breakpoints-buffer)
   (gdb-invalidate-breakpoints)
-  (gdb-invalidate-threads)
   (gdb-get-changed-registers)
   (gdb-invalidate-registers)
   (gdb-invalidate-locals)
@@ -1789,8 +1799,9 @@ FILE is a full path."
   "Font lock keywords used in `gdb-threads-mode'.")
 
 (defvar gdb-threads-mode-map
-  ;; TODO
-  (make-sparse-keymap))
+  (let ((map (make-sparse-keymap)))
+    (define-key map " " 'gdb-select-thread)
+    map))
 
 (defun gdb-threads-mode ()
   "Major mode for GDB threads.
@@ -1812,7 +1823,13 @@ FILE is a full path."
 
 (defun gdb-thread-list-handler-custom ()
   (let* ((res (json-partial-output))
-         (threads-list (gdb-get-field res 'threads)))
+         (threads-list (gdb-get-field res 'threads))
+         (current-thread (gdb-get-field res 'current-thread-id)))
+    (when (not (string-equal current-thread gdb-thread-number))
+      ;; Implicitly switch thread (in case previous one dies)
+      (message (concat "GDB switched to another thread: " current-thread))
+      (setq gdb-thread-number current-thread))
+    (set-marker gdb-thread-position nil)
     (dolist (thread threads-list)
       (insert (apply 'format `("%s (%s) %s in %s "
                                ,@(gdb-get-many-fields thread 'id 'target-id 'state)
@@ -1831,12 +1848,8 @@ FILE is a full path."
                            `(gdb-thread ,thread))
       (when (string-equal gdb-thread-number
                           (gdb-get-field thread 'id))
-        (set-marker gdb-stack-position (line-beginning-position)))
-      (newline))
-    (let ((current-thread (gdb-get-field res 'current-thread-id)))
-      (message
-       (concat "GDB current thread: " current-thread
-               ", Emacs current thread: " gdb-thread-number)))))
+        (set-marker gdb-thread-position (line-beginning-position)))
+      (newline))))
 
 (defun gdb-select-thread ()
   "Select the thread at current line of threads buffer."
@@ -1847,9 +1860,9 @@ FILE is a full path."
     (if thread
         (if (string-equal (gdb-get-field thread 'state) "running")
             (error "Cannot select running thread")
-          (progn
-            (setq gdb-thread-number (gdb-get-field thread 'id))
-            (gdb-update)))
+          (let ((new-id (gdb-get-field thread 'id)))
+            (setq gdb-thread-number new-id)
+            (gud-basic-call (concat "-thread-select " new-id))))
       (error "Not recognized as thread line")))))
 
 
