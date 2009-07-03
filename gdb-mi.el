@@ -1825,7 +1825,8 @@ FILE is a full path."
   (let* ((res (json-partial-output))
          (threads-list (gdb-get-field res 'threads))
          (current-thread (gdb-get-field res 'current-thread-id)))
-    (when (not (string-equal current-thread gdb-thread-number))
+    (when (and current-thread
+               (not (string-equal current-thread gdb-thread-number)))
       ;; Implicitly switch thread (in case previous one dies)
       (message (concat "GDB switched to another thread: " current-thread))
       (setq gdb-thread-number current-thread))
