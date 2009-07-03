@@ -2743,7 +2743,7 @@ member."
 
 (def-gdb-auto-update-trigger gdb-invalidate-registers
   (gdb-get-buffer 'gdb-registers-buffer)
-  "-data-list-register-values x"
+  (concat (gdb-current-context-command "-data-list-register-values") " x")
   gdb-data-list-register-values-handler)
 
 (defconst gdb-data-list-register-values-regexp
