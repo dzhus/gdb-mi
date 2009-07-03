@@ -2604,10 +2604,10 @@ member."
 		      'gdb-locals-buffer-name
 		      'gdb-locals-mode)
 
-(def-gdb-auto-update-trigger gdb-invalidate-locals
-  (gdb-get-buffer 'gdb-locals-buffer)
+(def-gdb-auto-updated-buffer gdb-locals-buffer
+  gdb-invalidate-locals
   (concat (gdb-current-context-command "-stack-list-locals") " --simple-values")
-  gdb-stack-list-locals-handler)
+  gdb-locals-handler gdb-locals-handler-custom)
 
 (defconst gdb-stack-list-locals-regexp
   (concat "name=\"\\(.*?\\)\",type=\"\\(.*?\\)\""))
@@ -2641,45 +2641,27 @@ member."
 
 ;; Dont display values of arrays or structures.
 ;; These can be expanded using gud-watch.
-(defun gdb-stack-list-locals-handler nil
-  (setq gdb-pending-triggers (delq 'gdb-invalidate-locals
-				  gdb-pending-triggers))
-   (let (local locals-list)
-    (goto-char (point-min))
-    (while (re-search-forward gdb-stack-list-locals-regexp nil t)
-      (let ((local (list (match-string 1)
-			 (match-string 2)
-			 nil)))
-	(if (looking-at ",value=\\(\".*\"\\)}")
-	    (setcar (nthcdr 2 local) (read (match-string 1))))
-	(push local locals-list)))
-    (let ((buf (gdb-get-buffer 'gdb-locals-buffer)))
-      (and buf (with-current-buffer buf
-		 (let* ((window (get-buffer-window buf 0))
-			(start (window-start window))
-			(p (window-point window))
-			(buffer-read-only nil) (name) (value))
-		   (erase-buffer)
-		   (dolist (local locals-list)
-		     (setq name (car local))
-		     (setq value (nth 2 local))
-		     (if (or (not value)
-			     (string-match "\\0x" value))
-		       (add-text-properties 0 (length name)
+(defun gdb-locals-handler-custom ()
+  (let ((locals-list (gdb-get-field (json-partial-output) 'locals)))
+    (dolist (local locals-list)
+      (let ((name (gdb-get-field local 'name))
+            (value (gdb-get-field local 'value))
+            (type (gdb-get-field local 'type)))
+        (if (or (not value)
+                (string-match "\\0x" value))
+            (add-text-properties 0 (length name)
 			    `(mouse-face highlight
 			      help-echo "mouse-2: create watch expression"
 			      local-map ,gdb-locals-watch-map)
 			    name)
-			 (add-text-properties 0 (length value)
-			      `(mouse-face highlight
+          (add-text-properties 0 (length value)
+                               `(mouse-face highlight
 			        help-echo "mouse-2: edit value"
 			        local-map ,gdb-edit-locals-map-1)
 			      value))
 		       (insert
-			(concat name "\t" (nth 1 local)
-				"\t" (nth 2 local) "\n")))
-		   (set-window-start window start)
-		   (set-window-point window p)))))))
+			(concat name "\t" type
+				"\t" value "\n"))))))
 
 (defvar gdb-locals-header
  `(,(propertize "Locals"
