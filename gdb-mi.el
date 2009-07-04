@@ -1698,8 +1698,7 @@ If not in a source or disassembly buffer just set point."
 	       (get-text-property 0 'gdb-bptno obj)))))))))
 
 (defun gdb-breakpoints-buffer-name ()
-  (with-current-buffer gud-comint-buffer
-    (concat "*breakpoints of " (gdb-get-target-string) "*")))
+  (concat "*breakpoints of " (gdb-get-target-string) "*"))
 
 (def-gdb-display-buffer
  gdb-display-breakpoints-buffer
@@ -2250,8 +2249,7 @@ corresponding to the mode line clicked."
   'gdb-invalidate-memory)
 
 (defun gdb-memory-buffer-name ()
-  (with-current-buffer gud-comint-buffer
-    (concat "*memory of " (gdb-get-target-string) "*")))
+  (concat "*memory of " (gdb-get-target-string) "*"))
 
 (def-gdb-display-buffer
   gdb-display-memory-buffer
@@ -2540,8 +2538,7 @@ member."
              (forward-line 1)))))
 
 (defun gdb-stack-buffer-name ()
-  (with-current-buffer gud-comint-buffer
-    (concat "*stack frames of " (gdb-get-target-string) "*")))
+  (concat "*stack frames of " (gdb-get-target-string) "*"))
 
 (def-gdb-display-buffer
  gdb-display-stack-buffer
@@ -2717,8 +2714,7 @@ member."
   'gdb-invalidate-locals)
 
 (defun gdb-locals-buffer-name ()
-  (with-current-buffer gud-comint-buffer
-    (concat "*locals of " (gdb-get-target-string) "*")))
+  (concat "*locals of " (gdb-get-target-string) "*"))
 
 (def-gdb-display-buffer
  gdb-display-locals-buffer
@@ -2813,8 +2809,7 @@ member."
   'gdb-invalidate-registers)
 
 (defun gdb-registers-buffer-name ()
-  (with-current-buffer gud-comint-buffer
-    (concat "*registers of " (gdb-get-target-string) "*")))
+  (concat "*registers of " (gdb-get-target-string) "*"))
 
 (def-gdb-display-buffer
  gdb-display-registers-buffer
