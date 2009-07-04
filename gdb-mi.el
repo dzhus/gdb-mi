@@ -1852,6 +1852,12 @@ FILE is a full path."
 (defvar gdb-threads-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map " " 'gdb-select-thread)
+    (define-key map "s" 'gdb-display-stack-for-thread)
+    (define-key map "S" 'gdb-frame-stack-for-thread)
+    (define-key map "l" 'gdb-display-locals-for-thread)
+    (define-key map "L" 'gdb-frame-locals-for-thread)
+    (define-key map "r" 'gdb-display-registers-for-thread)
+    (define-key map "R" 'gdb-frame-registers-for-thread)
     map))
 
 (defun gdb-threads-mode ()
@@ -1903,19 +1909,69 @@ FILE is a full path."
         (set-marker gdb-thread-position (line-beginning-position)))
       (newline))))
 
-(defun gdb-select-thread ()
-  "Select the thread at current line of threads buffer."
-  (interactive)
-  (save-excursion
-  (beginning-of-line)
-  (let ((thread (get-text-property (point) 'gdb-thread)))
-    (if thread
-        (if (string-equal (gdb-get-field thread 'state) "running")
-            (error "Cannot select running thread")
-          (let ((new-id (gdb-get-field thread 'id)))
-            (setq gdb-thread-number new-id)
-            (gud-basic-call (concat "-thread-select " new-id))))
-      (error "Not recognized as thread line")))))
+(defmacro def-gdb-thread-buffer-command (name custom-defun &optional doc)
+  "Define a NAME command which will act upon thread on the current line.
+
+CUSTOM-DEFUN may use locally bound `thread' variable, which will
+be the value of 'gdb-thread propery of the current line. If
+'gdb-thread is nil, error is signaled."
+  `(defun ,name ()
+     ,(when doc doc)
+     (interactive)
+     (save-excursion
+       (beginning-of-line)
+       (let ((thread (get-text-property (point) 'gdb-thread)))
+         (if thread
+             ,custom-defun
+           (error "Not recognized as thread line"))))))
+
+(defmacro def-gdb-thread-buffer-simple-command (name buffer-command &optional doc)
+  "Define a NAME which will call BUFFER-COMMAND with id of thread
+on the current line."
+  `(def-gdb-thread-buffer-command ,name
+     (,buffer-command (gdb-get-field thread 'id))
+     ,doc))
+
+(def-gdb-thread-buffer-command gdb-select-thread
+  (if (string-equal (gdb-get-field thread 'state) "running")
+      (error "Cannot select running thread")
+    (let ((new-id (gdb-get-field thread 'id)))
+      (setq gdb-thread-number new-id)
+      (gud-basic-call (concat "-thread-select " new-id))))
+  "Select the thread at current line of threads buffer.")
+
+(def-gdb-thread-simple-buffer-command
+  gdb-display-stack-for-thread
+  gdb-display-stack-buffer
+  "Display stack buffer for the thread at current line.")
+
+(def-gdb-thread-simple-buffer-command
+  gdb-display-locals-for-thread
+  gdb-display-locals-buffer
+  "Display locals buffer for the thread at current line.")
+
+(def-gdb-thread-simple-buffer-command
+  gdb-display-registers-for-thread
+  gdb-display-registers-buffer
+  "Display registers buffer for the thread at current line.")
+
+(def-gdb-thread-simple-buffer-command
+  gdb-frame-stack-for-thread
+  gdb-frame-stack-buffer
+  "Display a new frame with stack buffer for the thread at
+current line.")
+
+(def-gdb-thread-simple-buffer-command
+  gdb-frame-locals-for-thread
+  gdb-frame-locals-buffer
+  "Display a new frame with locals buffer for the thread at
+current line.")
+
+(def-gdb-thread-simple-buffer-command
+  gdb-frame-registers-for-thread
+  gdb-frame-registers-buffer
+  "Display a new frame with registers buffer for the thread at
+current line.")
 
 
 ;;; Memory view
