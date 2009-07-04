@@ -1200,11 +1200,19 @@ static char *magick[] = {
   (process-send-string (get-buffer-process gud-comint-buffer)
 		       (concat (car item) "\n")))
 
-(defmacro gdb-current-context-command (command)
+(defun gdb-current-context-command (command)
   "Add --thread option to gdb COMMAND.
 
 Option value is taken from `gdb-thread-number'."
   (concat command " --thread " gdb-thread-number))
+
+(defun gdb-current-context-buffer-name (name)
+  "Add thread information and asterisks to string NAME."
+  (concat "*" name
+          (if (local-variable-p 'gdb-thread-number) 
+              " (bound to thread "
+            " (current thread ")
+          gdb-thread-number ")*"))
 
 
 (defcustom gud-gdb-command-name "gdb -i=mi"
@@ -2584,10 +2592,8 @@ member."
              (forward-line 1)))))
 
 (defun gdb-stack-buffer-name ()
-  (concat "*stack frames of " (gdb-get-target-string)
-          (if (local-variable-p 'gdb-thread-number) 
-              (concat " (thread " gdb-thread-number ")"))
-            "*"))
+  (gdb-current-context-buffer-name
+   (concat "stack frames of " (gdb-get-target-string))))
 
 (def-gdb-display-buffer
  gdb-display-stack-buffer
@@ -2765,7 +2771,8 @@ member."
   'gdb-invalidate-locals)
 
 (defun gdb-locals-buffer-name ()
-  (concat "*locals of " (gdb-get-target-string) "*"))
+  (gdb-current-context-buffer-name
+   (concat "locals of " (gdb-get-target-string))))
 
 (def-gdb-display-buffer
  gdb-display-locals-buffer
@@ -2830,7 +2837,8 @@ member."
   'gdb-invalidate-registers)
 
 (defun gdb-registers-buffer-name ()
-  (concat "*registers of " (gdb-get-target-string) "*"))
+  (gdb-current-context-buffer-name
+   (concat "registers of " (gdb-get-target-string))))
 
 (def-gdb-display-buffer
  gdb-display-registers-buffer
