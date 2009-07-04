@@ -486,7 +486,7 @@ detailed description of this mode.
    ; Needs GDB 6.0 onwards.
    (list "-file-list-exec-source-file" 'gdb-get-source-file))
   (gdb-input
-   (list "-data-list-register-names" 'gdb-get-register-names))
+   (list "-data-list-register-names" 'gdb-register-names-handler))
   (gdb-input
    (list "-gdb-show prompt" 'gdb-get-prompt))
   ;;
@@ -2747,11 +2747,14 @@ member."
              (value (gdb-get-field register 'value))
              (register-name (nth (string-to-number register-number) 
                                  register-names-list)))
-        (insert (concat
-                 (propertize register-name
-                             'face font-lock-variable-name-face) 
-                 "\t"
-                 value "\n"))))))
+        (insert 
+         (concat
+          (propertize register-name 'face font-lock-variable-name-face) 
+          "\t"
+          (if (member register-number gdb-changed-registers)
+              (propertize value 'face font-lock-warning-face)
+            value)
+          "\n"))))))
 
 (defvar gdb-registers-mode-map
   (let ((map (make-sparse-keymap)))
@@ -2794,25 +2797,23 @@ member."
 	(gdb-input
 	 (list
 	  "-data-list-changed-registers"
-	  'gdb-get-changed-registers-handler))
+	  'gdb-changed-registers-handler))
 	(push 'gdb-get-changed-registers gdb-pending-triggers))))
 
-(defconst gdb-data-list-register-names-regexp "\"\\(.*?\\)\"")
-
-(defun gdb-get-changed-registers-handler ()
+(defun gdb-changed-registers-handler ()
   (setq gdb-pending-triggers
-	(delq 'gdb-get-changed-registers gdb-pending-triggers))
+        (delq 'gdb-get-changed-registers gdb-pending-triggers))
   (setq gdb-changed-registers nil)
-  (goto-char (point-min))
-  (while (re-search-forward gdb-data-list-register-names-regexp nil t)
-    (push (match-string 1) gdb-changed-registers)))
+  (dolist (register-number (gdb-get-field (json-partial-output) 'changed-registers))
+    (push register-number gdb-changed-registers)))
 
-(defun gdb-get-register-names ()
-  "Create a list of register names."
-  (goto-char (point-min))
+(defun gdb-register-names-handler ()
+  ;; Don't use gdb-pending-triggers because this handler is called
+  ;; only once (in gdb-init-1)
   (setq gdb-register-names nil)
-  (while (re-search-forward gdb-data-list-register-names-regexp nil t)
-    (push (match-string 1) gdb-register-names)))
+  (dolist (register-name (gdb-get-field (json-partial-output) 'register-names))
+    (push register-name gdb-register-names))
+  (setq gdb-register-names (reverse gdb-register-names)))
 
 
 (defun gdb-get-source-file-list ()
