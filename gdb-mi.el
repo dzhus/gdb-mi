@@ -2584,7 +2584,10 @@ member."
              (forward-line 1)))))
 
 (defun gdb-stack-buffer-name ()
-  (concat "*stack frames of " (gdb-get-target-string) " (thread " gdb-thread-number ")*"))
+  (concat "*stack frames of " (gdb-get-target-string)
+          (if (local-variable-p 'gdb-thread-number) 
+              (concat " (thread " gdb-thread-number ")"))
+            "*"))
 
 (def-gdb-display-buffer
  gdb-display-stack-buffer
