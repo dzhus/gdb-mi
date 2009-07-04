@@ -1504,24 +1504,25 @@ are not guaranteed."
     (dolist (field fields values)
       (setq values (append values (list (gdb-get-field struct field)))))))
 
-;; NAME is the function name. DEMAND-PREDICATE tests if output is really needed.
+;; NAME is the function name.
 ;; GDB-COMMAND is a string of such.  HANDLER-NAME is the function bound to the
 ;; current input and buffer which recieved the trigger signal.
+;; Trigger must be bound to buffer via gdb-bind-function-to-buffer before use!
+;; See how it's done in gdb-get-buffer-create.
 
-(defmacro def-gdb-auto-update-trigger (trigger-name demand-predicate gdb-command
+(defmacro def-gdb-auto-update-trigger (trigger-name gdb-command
                                                     handler-name)
   `(defun ,trigger-name (&optional signal)
-     (if (and ,demand-predicate
-	      (not (member (cons (current-buffer) ',trigger-name)
-			   gdb-pending-triggers)))
-	 (progn
-	   (gdb-input
-	    (list ,gdb-command
+     (if (not (member (cons (current-buffer) ',trigger-name)
+                      gdb-pending-triggers))
+         (progn
+           (gdb-input
+            (list ,gdb-command
                   (gdb-bind-function-to-buffer ',handler-name (current-buffer))))
-           (push (cons (current-buffer) ',name) gdb-pending-triggers)))))
+           (push (cons (current-buffer) ',trigger-name) gdb-pending-triggers)))))
 
 ;; Used by disassembly buffer only, the rest use
-;; def-gdb-auto-updated-buffer
+;; def-gdb-trigger-and-handler
 (defmacro def-gdb-auto-update-handler (handler-name trigger-name custom-defun)
   "Define a handler HANDLER-NAME for TRIGGER-NAME with CUSTOM-DEFUN.
 
@@ -1536,19 +1537,15 @@ erase current buffer and evaluate CUSTOM-DEFUN."
        (,custom-defun)
        (gdb-update-buffer-name))))
 
-(defmacro def-gdb-trigger-and-handler (buf-key
-                                       trigger-name gdb-command
+(defmacro def-gdb-trigger-and-handler (trigger-name gdb-command
 				       handler-name custom-defun)
-  "Define trigger and handler for buffers of type BUF-KEY.
+  "Define trigger and handler.
 
-TRIGGER-NAME trigger is defined to send GDB-COMMAND if BUF-KEY
-exists.
+TRIGGER-NAME trigger is defined to send GDB-COMMAND.
 
 HANDLER-NAME handler uses customization of CUSTOM-DEFUN."
   `(progn
      (def-gdb-auto-update-trigger ,trigger-name
-       ;; The demand predicate: TODO DO WE NEED THIS?
-       (gdb-get-buffer ',buf-key)
        ,gdb-command
        ,handler-name)
      (def-gdb-auto-update-handler ,handler-name
@@ -1557,7 +1554,7 @@ HANDLER-NAME handler uses customization of CUSTOM-DEFUN."
 
 
 ;; Breakpoint buffer : This displays the output of `-break-list'.
-(def-gdb-trigger-and-handler gdb-breakpoints-buffer
+(def-gdb-trigger-and-handler
   gdb-invalidate-breakpoints "-break-list"
   gdb-breakpoints-list-handler gdb-breakpoints-list-handler-custom)
 
@@ -1824,7 +1821,7 @@ FILE is a full path."
  'gdb-threads-buffer
  "Display GDB threads in a new frame.")
 
-(def-gdb-trigger-and-handler gdb-threads-buffer
+(def-gdb-trigger-and-handler
   gdb-invalidate-threads "-thread-info"
   gdb-thread-list-handler gdb-thread-list-handler-custom)
 
@@ -1942,7 +1939,7 @@ FILE is a full path."
   :group 'gud
   :version "23.2")
 
-(def-gdb-trigger-and-handler gdb-memory-buffer 
+(def-gdb-trigger-and-handler
   gdb-invalidate-memory
   (format "-data-read-memory %s %s %d %d %d" 
           gdb-memory-address
@@ -2329,7 +2326,6 @@ corresponding to the mode line clicked."
  "Display disassembly in a new frame.")
 
 (def-gdb-auto-update-trigger gdb-invalidate-disassembly
-  (gdb-get-buffer 'gdb-disassembly-buffer)
   (let ((file (or gdb-selected-file gdb-main-file))
         (line (or gdb-selected-line 1)))
     (if (not file) (error "Disassembly invalidated with no file selected.")
@@ -2530,7 +2526,7 @@ breakpoints buffer."
 
 ;; Frames buffer.  This displays a perpetually correct bactrack trace.
 ;;
-(def-gdb-trigger-and-handler gdb-stack-buffer
+(def-gdb-trigger-and-handler
   gdb-invalidate-frames (gdb-current-context-command "-stack-list-frames")
   gdb-stack-list-frames-handler gdb-stack-list-frames-custom)
 
@@ -2643,7 +2639,7 @@ member."
 
 ;; Locals buffer.
 ;; uses "-stack-list-locals --simple-values". Needs GDB 6.1 onwards.
-(def-gdb-trigger-and-handler gdb-locals-buffer
+(def-gdb-trigger-and-handler
   gdb-invalidate-locals
   (concat (gdb-current-context-command "-stack-list-locals") " --simple-values")
   gdb-locals-handler gdb-locals-handler-custom)
@@ -2777,7 +2773,7 @@ member."
 
 ;; Registers buffer.
 
-(def-gdb-auto-updated-buffer gdb-registers-buffer
+(def-gdb-trigger-and-handler
   gdb-invalidate-registers
   (concat (gdb-current-context-command "-data-list-register-values") " x")
   gdb-registers-handler
