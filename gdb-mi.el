@@ -178,7 +178,17 @@ Possible values are these symbols:
 	       gdb mode sends to gdb on its own behalf.")
 
 (defvar gdb-pending-triggers '()
-  "A list of trigger functions that have run later than their output handlers.")
+  "A list of trigger functions which have not yet been handled.
+
+Elements are either function names or pairs (buffer . function)")
+
+(defmacro gdb-add-pending (item)
+  `(push ,item gdb-pending-triggers))
+(defmacro gdb-pending-p (item)
+  `(member ,item gdb-pending-triggers))
+(defmacro gdb-delete-pending (item)
+  `(setq gdb-pending-triggers
+         (delete ,item gdb-pending-triggers)))
 
 (defcustom gdb-debug-log-max 128
   "Maximum size of `gdb-debug-log'.  If nil, size is unlimited."
@@ -697,17 +707,16 @@ With arg, enter name of variable to be watched in the minibuffer."
 
 (defun gdb-speedbar-update ()
   (when (and (boundp 'speedbar-frame) (frame-live-p speedbar-frame)
-	     (not (member 'gdb-speedbar-timer gdb-pending-triggers)))
+	     (not (gdb-pending-p 'gdb-speedbar-timer)))
     ;; Dummy command to update speedbar even when idle.
     (gdb-input (list "-environment-pwd" 'gdb-speedbar-timer-fn))
     ;; Keep gdb-pending-triggers non-nil till end.
-    (push 'gdb-speedbar-timer gdb-pending-triggers)))
+    (gdb-add-pending 'gdb-speedbar-timer)))
 
 (defun gdb-speedbar-timer-fn ()
   (if gdb-speedbar-auto-raise
       (raise-frame speedbar-frame))
-  (setq gdb-pending-triggers
-	(delq 'gdb-speedbar-timer gdb-pending-triggers))
+  (gdb-delete-pending 'gdb-speedbar-timer)
   (speedbar-timer-fn))
 
 (defun gdb-var-evaluate-expression-handler (varnum changed)
@@ -804,10 +813,10 @@ numchild=\"\\(.+?\\)\".*?,value=\\(\".*?\"\\).*?,type=\"\\(.+?\\)\".*?}")
 
 ; Uses "-var-update --all-values".  Needs GDB 6.4 onwards.
 (defun gdb-var-update ()
-  (if (not (member 'gdb-var-update gdb-pending-triggers))
+  (if (not (gdb-pending-p 'gdb-var-update))
       (gdb-input
        (list "-var-update --all-values *" 'gdb-var-update-handler)))
-  (push 'gdb-var-update gdb-pending-triggers))
+  (gdb-add-pending 'gdb-var-update))
 
 (defconst gdb-var-update-regexp
   "{.*?name=\"\\(.*?\\)\".*?,\\(?:value=\\(\".*?\"\\),\\)?.*?\
@@ -832,8 +841,7 @@ in_scope=\"\\(.*?\\)\".*?}")
 			 (read (match-string 2))))
 		((string-equal match "invalid")
 		 (gdb-var-delete-1 varnum)))))))
-  (setq gdb-pending-triggers
-   (delq 'gdb-var-update gdb-pending-triggers))
+  (gdb-delete-pending 'gdb-var-update)
   (gdb-speedbar-update))
 
 (defun gdb-speedbar-expand-node (text token indent)
@@ -1513,13 +1521,13 @@ are not guaranteed."
 (defmacro def-gdb-auto-update-trigger (trigger-name gdb-command
                                                     handler-name)
   `(defun ,trigger-name (&optional signal)
-     (if (not (member (cons (current-buffer) ',trigger-name)
-                      gdb-pending-triggers))
+     (if (not (gdb-pending-p
+               (cons (current-buffer) ',trigger-name)))
          (progn
            (gdb-input
             (list ,gdb-command
                   (gdb-bind-function-to-buffer ',handler-name (current-buffer))))
-           (push (cons (current-buffer) ',trigger-name) gdb-pending-triggers)))))
+           (gdb-add-pending (cons (current-buffer) ',trigger-name))))))
 
 ;; Used by disassembly buffer only, the rest use
 ;; def-gdb-trigger-and-handler
@@ -1529,9 +1537,7 @@ are not guaranteed."
 Delete ((current-buffer) . TRIGGER) from `gdb-pending-triggers',
 erase current buffer and evaluate CUSTOM-DEFUN."
   `(defun ,handler-name ()
-     (setq gdb-pending-triggers
-           (delq (cons (current-buffer) ',trigger-name)
-                 gdb-pending-triggers))
+     (gdb-delete-pending (cons (current-buffer) ',trigger-name))
      (let* ((buffer-read-only nil))
        (erase-buffer)
        (,custom-defun)
@@ -1565,8 +1571,6 @@ HANDLER-NAME handler uses customization of CUSTOM-DEFUN."
  'gdb-invalidate-breakpoints)
 
 (defun gdb-breakpoints-list-handler-custom ()
-  (setq gdb-pending-triggers (delq 'gdb-invalidate-breakpoints
-				  gdb-pending-triggers))
   (let ((breakpoints-list (gdb-get-field 
                            (json-partial-output "bkpt")
                            'BreakpointTable 'body)))
@@ -2838,17 +2842,16 @@ member."
 ;; Needs GDB 6.4 onwards (used to fail with no stack).
 (defun gdb-get-changed-registers ()
   (if (and (gdb-get-buffer 'gdb-registers-buffer)
-	   (not (member 'gdb-get-changed-registers gdb-pending-triggers)))
+	   (not (gdb-pending-p 'gdb-get-changed-registers)))
       (progn
 	(gdb-input
 	 (list
 	  "-data-list-changed-registers"
 	  'gdb-changed-registers-handler))
-	(push 'gdb-get-changed-registers gdb-pending-triggers))))
+	(gdb-add-pending 'gdb-get-changed-registers))))
 
 (defun gdb-changed-registers-handler ()
-  (setq gdb-pending-triggers
-        (delq 'gdb-get-changed-registers gdb-pending-triggers))
+  (gdb-delete-pending 'gdb-get-changed-registers)
   (setq gdb-changed-registers nil)
   (dolist (register-number (gdb-get-field (json-partial-output) 'changed-registers))
     (push register-number gdb-changed-registers)))
@@ -2877,7 +2880,7 @@ is set in them."
    (propertize "ready" 'face font-lock-variable-name-face)))
 
 (defun gdb-get-selected-frame ()
-  (if (not (member 'gdb-get-selected-frame gdb-pending-triggers))
+  (if (not (gdb-pending-p 'gdb-get-selected-frame))
       (progn
 	(gdb-input
 	 (list (gdb-current-context-command "-stack-info-frame") 'gdb-frame-handler))
@@ -2885,8 +2888,7 @@ is set in them."
 	       gdb-pending-triggers))))
 
 (defun gdb-frame-handler ()
-  (setq gdb-pending-triggers
-	(delq 'gdb-get-selected-frame gdb-pending-triggers))
+  (gdb-delete-pending 'gdb-get-selected-frame)
   (let ((frame (gdb-get-field (json-partial-output) 'frame)))
     (when frame
       (setq gdb-frame-number (gdb-get-field frame 'level))
