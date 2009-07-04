@@ -80,7 +80,7 @@
 
          Add clickable buttons for `jmp`, `jl` arguments
    
-** TODO Program memory                                                  :new:
+** IN PROGRESS Program memory                                           :new:
    - [X] basic information
    - [X] keymap
    - [X] header
@@ -93,32 +93,36 @@
          not implemented yet.
 
 * GDB+Emacs interface improvements
-
+  
 * Overall UI improvements                                                :ui:
 ** TODO Improve `gdb-jump-to`
    See also `gud-display-line` for implementation ideas
 ** TODO Headers
 
 * Multiple threads support                                         :redesign:
-** TODO Buffer model review
+** IN PROGRESS Buffer model review
    Several new concepts for GDB buffers must be introduced:
    
-   - [ ] buffer-local variable with a number of thread this buffer shows
+   - [X] buffer-local variable with a number of thread this buffer shows
      information for
 
    - [ ] same for frame number
 
-   - [ ] extend `gdb-get-buffer-create` etc. to allow working with
+   - [X] extend `gdb-get-buffer-create` etc. to allow working with
      buffers of the same type (like frames list) for several threads
      simultaneously
 
    - [ ] make sure thread selection interface is clear and intuitive
 
-   - [ ] include thread information in buffer names to avoid confusion
-** TODO Stack information
+   - [X] include thread information in buffer names to avoid confusion
+** DONE Stack information
+   CLOSED: [2009-07-04 Сбт 20:25]
    There must be some way to examine stack info for different threads
-
-* IN PROGRESS Stack information handling                           :redesign:
+** TODO [#A] Delete dead subscribers from `gdb-buf-publisher`
+   See `kill-buffer-hook`. May be set for all GDB buffers when they're
+   all derived from [[generic mode]].
+   
+* IN PROGRESS [#A] Stack information handling                      :redesign:
   `gdb-frame-handler` is not robust. Must think of how should gdb-mi
   act when we stop in a routine w/o line info. Currently we simply
   don't reset `gud-last-frame` in this case. Disassembly buffer falls
