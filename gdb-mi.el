@@ -7,7 +7,7 @@
 ;; Copyright (C) 2007, 2008, 2009 Free Software Foundation, Inc.
 
 ;; This file will become part of GNU Emacs.
-;; Version 0.6 from ELPA archive.
+;; Version 0.6.1.
 ;; Use with gud.el from the same archive.
 
 ;; Homepage: http://www.emacswiki.org/emacs/GDB-MI
