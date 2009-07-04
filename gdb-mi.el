@@ -2733,60 +2733,25 @@ member."
 		      'gdb-registers-buffer-name
 		      'gdb-registers-mode)
 
-(def-gdb-auto-update-trigger gdb-invalidate-registers
-  (gdb-get-buffer 'gdb-registers-buffer)
+(def-gdb-auto-updated-buffer gdb-registers-buffer
+  gdb-invalidate-registers
   (concat (gdb-current-context-command "-data-list-register-values") " x")
-  gdb-data-list-register-values-handler)
+  gdb-registers-handler
+  gdb-registers-handler-custom)
 
-(defconst gdb-data-list-register-values-regexp
-  "number=\"\\(.*?\\)\",value=\"\\(.*?\\)\"")
-
-(defun gdb-data-list-register-values-handler ()
-  (setq gdb-pending-triggers (delq 'gdb-invalidate-registers
-				   gdb-pending-triggers))
-  (goto-char (point-min))
-  (if (re-search-forward gdb-error-regexp nil t)
-      (progn
-	(let ((match nil))
-	  (setq match (match-string 1))
-	  (with-current-buffer (gdb-get-buffer 'gdb-registers-buffer)
-	    (let ((buffer-read-only nil))
-	      (erase-buffer)
-	      (insert match)
-	      (goto-char (point-min))))))
-    (let ((register-list (reverse gdb-register-names))
-	  (register nil) (register-string nil) (register-values nil))
-      (goto-char (point-min))
-      (while (re-search-forward gdb-data-list-register-values-regexp nil t)
-	(setq register (pop register-list))
-	(setq register-string (concat register "\t" (match-string 2) "\n"))
-	(if (member (match-string 1) gdb-changed-registers)
-	    (put-text-property 0 (length register-string)
-			       'face 'font-lock-warning-face
-			       register-string))
-	(setq register-values
-	      (concat register-values register-string)))
-      (let ((buf (gdb-get-buffer 'gdb-registers-buffer)))
-	(with-current-buffer buf
-	  (let ((p (window-point (get-buffer-window buf 0)))
-		(buffer-read-only nil))
-	    (erase-buffer)
-	    (insert register-values)
-	    (set-window-point (get-buffer-window buf 0) p))))))
-  (gdb-data-list-register-values-custom))
-
-(defun gdb-data-list-register-values-custom ()
-  (with-current-buffer (gdb-get-buffer 'gdb-registers-buffer)
-    (save-excursion
-      (let ((buffer-read-only nil)
-	    bl)
-	(goto-char (point-min))
-	(while (< (point) (point-max))
-	  (setq bl (line-beginning-position))
-	  (when (looking-at "^[^\t]+")
-	    (put-text-property bl (match-end 0)
-			       'face font-lock-variable-name-face))
-	  (forward-line 1))))))
+(defun gdb-registers-handler-custom ()
+  (let ((register-values (gdb-get-field (json-partial-output) 'register-values))
+        (register-names-list (reverse gdb-register-names)))
+    (dolist (register register-values)
+      (let* ((register-number (gdb-get-field register 'number))
+             (value (gdb-get-field register 'value))
+             (register-name (nth (string-to-number register-number) 
+                                 register-names-list)))
+        (insert (concat
+                 (propertize register-name
+                             'face font-lock-variable-name-face) 
+                 "\t"
+                 value "\n"))))))
 
 (defvar gdb-registers-mode-map
   (let ((map (make-sparse-keymap)))
