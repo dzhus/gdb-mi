@@ -2880,7 +2880,7 @@ member."
     (define-key map "q" 'kill-this-buffer)
      map))
 
-(define-derived-mode gdb-frames-mode gdb-parent-mode "Registers"
+(define-derived-mode gdb-registers-mode gdb-parent-mode "Registers"
   "Major mode for gdb registers.
 
 \\{gdb-registers-mode-map}"
