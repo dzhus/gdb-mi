@@ -1903,8 +1903,6 @@ FILE is a full path."
 
 \\{gdb-threads-mode-map}"
   (kill-all-local-variables)
-  (setq major-mode 'gdb-threads-mode)
-  (setq mode-name "Threads")
   (use-local-map gdb-threads-mode-map)
   (setq buffer-read-only t)
   (buffer-disable-undo)
@@ -2386,8 +2384,6 @@ corresponding to the mode line clicked."
 
 \\{gdb-memory-mode-map}"
   (kill-all-local-variables)
-  (setq major-mode 'gdb-memory-mode)
-  (setq mode-name "Memory")
   (use-local-map gdb-memory-mode-map)
   (setq buffer-read-only t)
   (setq header-line-format gdb-memory-header)
@@ -2473,8 +2469,6 @@ corresponding to the mode line clicked."
 
 \\{gdb-disassembly-mode-map}"
   (kill-all-local-variables)
-  (setq major-mode 'gdb-disassembly-mode)
-  (setq mode-name "Disassembly")
   (add-to-list 'overlay-arrow-variable-list 'gdb-overlay-arrow-position)
   (setq fringes-outside-margins t)
   (setq gdb-overlay-arrow-position (make-marker))
@@ -2569,8 +2563,6 @@ corresponding to the mode line clicked."
 
 \\{gdb-breakpoints-mode-map}"
   (kill-all-local-variables)
-  (setq major-mode 'gdb-breakpoints-mode)
-  (setq mode-name "Breakpoints")
   (use-local-map gdb-breakpoints-mode-map)
   (setq buffer-read-only t)
   (buffer-disable-undo)
@@ -2717,8 +2709,6 @@ member."
 
 \\{gdb-frames-mode-map}"
   (kill-all-local-variables)
-  (setq major-mode 'gdb-frames-mode)
-  (setq mode-name "Frames")
   (setq gdb-stack-position nil)
   (add-to-list 'overlay-arrow-variable-list 'gdb-stack-position)
   (setq truncate-lines t)  ;; Make it easier to see overlay arrow.
@@ -2850,8 +2840,6 @@ member."
 
 \\{gdb-locals-mode-map}"
   (kill-all-local-variables)
-  (setq major-mode 'gdb-locals-mode)
-  (setq mode-name (concat "Locals:" gdb-selected-frame))
   (setq buffer-read-only t)
   (buffer-disable-undo)
   (setq header-line-format gdb-locals-header)
@@ -2918,8 +2906,6 @@ member."
 
 \\{gdb-registers-mode-map}"
   (kill-all-local-variables)
-  (setq major-mode 'gdb-registers-mode)
-  (setq mode-name "Registers")
   (setq header-line-format gdb-locals-header)
   (setq buffer-read-only t)
   (buffer-disable-undo)
