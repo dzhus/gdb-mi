@@ -121,6 +121,18 @@
    CLOSED: [2009-07-05 Вск 22:13]
    See `kill-buffer-hook`. May be set for all GDB buffers when they're
    all derived from [[generic mode]].
+** TODO Get frame information for each thread separately
+   To get overlay arrow showing properly in frames list buffer, we'll
+   need to call `gdb-get-selected-frame` for every buffer which shows
+   frames list for every thread. Disassembly is also currently
+   invalidated from inside the `gdb-get-selected-frame`, so things get
+   really tangled. We should switch to disassembly buffer from frames
+   list buffer, set all necessary variables there (`gdb-selected-file`
+   and `gdb-selected-line`) and then wait until disassembly buffer
+   updates via publisher signal. Or we may introduce change
+   `gdb-get-selected-frame` so that it simply returns selected frame
+   for current thread, and call this function whenever we need (both
+   in stack frames list buffer and disassembly buffer).
    
 * IN PROGRESS [#A] Stack information handling                      :redesign:
   `gdb-frame-handler` is not robust. Must think of how should gdb-mi
