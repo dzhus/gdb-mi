@@ -1940,34 +1940,34 @@ on the current line."
       (gud-basic-call (concat "-thread-select " new-id))))
   "Select the thread at current line of threads buffer.")
 
-(def-gdb-thread-simple-buffer-command
+(def-gdb-thread-buffer-simple-command
   gdb-display-stack-for-thread
   gdb-display-stack-buffer
   "Display stack buffer for the thread at current line.")
 
-(def-gdb-thread-simple-buffer-command
+(def-gdb-thread-buffer-simple-command
   gdb-display-locals-for-thread
   gdb-display-locals-buffer
   "Display locals buffer for the thread at current line.")
 
-(def-gdb-thread-simple-buffer-command
+(def-gdb-thread-buffer-simple-command
   gdb-display-registers-for-thread
   gdb-display-registers-buffer
   "Display registers buffer for the thread at current line.")
 
-(def-gdb-thread-simple-buffer-command
+(def-gdb-thread-buffer-simple-command
   gdb-frame-stack-for-thread
   gdb-frame-stack-buffer
   "Display a new frame with stack buffer for the thread at
 current line.")
 
-(def-gdb-thread-simple-buffer-command
+(def-gdb-thread-buffer-simple-command
   gdb-frame-locals-for-thread
   gdb-frame-locals-buffer
   "Display a new frame with locals buffer for the thread at
 current line.")
 
-(def-gdb-thread-simple-buffer-command
+(def-gdb-thread-buffer-simple-command
   gdb-frame-registers-for-thread
   gdb-frame-registers-buffer
   "Display a new frame with registers buffer for the thread at
