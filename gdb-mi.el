@@ -2719,9 +2719,6 @@ member."
  'gdb-locals-mode
  'gdb-invalidate-locals)
 
-(defconst gdb-stack-list-locals-regexp
-  (concat "name=\"\\(.*?\\)\",type=\"\\(.*?\\)\""))
-
 (defvar gdb-locals-watch-map
   (let ((map (make-sparse-keymap)))
     (suppress-keymap map)
