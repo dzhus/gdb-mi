@@ -5,9 +5,8 @@
 ## f for bugs, r for parts which need refactoring, n for new features
 
 * Being DRY
-** TODO Derive buffers mode from one generic mode                  :redesign:
-   There's too much copy&paste in code for modes of various GDB
-   buffers.
+** DONE Derive buffers mode from one generic mode                  :redesign:
+   CLOSED: [2009-07-05 Вск 22:13]
 
 ** DONE Write `gdb-def-frame-for-buffer`
    To define `gdb-frame-*-buffer` functions
@@ -89,7 +88,7 @@
    - [ ] show function name instead of just address
          
          MI does not provide function name in `-data-read-memory`
-         output =\ `-symbol-info-symbol` should allow this, but it's
+         output =\ `[[-symbol-info-symbol]]` should allow this, but it's
          not implemented yet.
 
 * GDB+Emacs interface improvements
@@ -118,7 +117,8 @@
 ** DONE Stack information
    CLOSED: [2009-07-04 Сбт 20:25]
    There must be some way to examine stack info for different threads
-** TODO [#A] Delete dead subscribers from `gdb-buf-publisher`
+** DONE [#A] Delete dead subscribers from `gdb-buf-publisher`
+   CLOSED: [2009-07-05 Вск 22:13]
    See `kill-buffer-hook`. May be set for all GDB buffers when they're
    all derived from [[generic mode]].
    
@@ -144,4 +144,8 @@
 ** gud-last-frame
 ** gdb-pending-triggers
 ** Why call ignored `list` command in `gdb-place-breakpoints`?
-
+* GDB
+** TODO Send `-symbol-info-symbol` patch
+   [[file:~/projects/gdb-trunk/symbol-info-symbol.diff]]
+** TODO Write `-stack-list-locals-and-args`
+** TODO Add current frame data to `-stack

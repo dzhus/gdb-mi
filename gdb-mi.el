@@ -893,6 +893,10 @@ INDENT is the current indentation depth."
                                         gdb-buffer-rules))))
     (when f (rename-buffer (funcall f)))))
 
+(defun gdb-get-current-buffer-rules ()
+  "Get `gdb-buffer-rules' entry for current buffer type."
+  (assoc gdb-buffer-type gdb-buffer-rules))
+
 (defun gdb-get-buffer (key &optional thread)
   "Get a specific GDB buffer.
 
@@ -982,6 +986,24 @@ DOC is an optional documentation string."
 	(setcdr binding rules)
       (push (cons buffer-type rules)
 	    gdb-buffer-rules))))
+
+(defun gdb-parent-mode ()
+  "Generic mode to derive all other GDB buffer modes from."
+  (setq buffer-read-only t)
+  ;; Delete buffer from gdb-buf-publisher when it's killed
+  (add-hook 
+   'kill-buffer-hook
+   (function
+    (lambda ()
+      (let ((trigger (gdb-rules-update-trigger
+                      (gdb-get-current-buffer-rules))))
+        (when trigger
+          (gdb-delete-subscriber 
+           gdb-buf-publisher
+           ;; This should match gdb-add-subscriber done in
+           ;; gdb-get-buffer-create
+           (cons (current-buffer)
+                 (gdb-bind-function-to-buffer trigger (current-buffer))))))))))
 
 ;; GUD buffers are an exception to the rules
 (gdb-set-buffer-rules 'gdbmi 'error)
@@ -1233,6 +1255,11 @@ Option value is taken from `gdb-thread-number'."
 SUBSCRIBER must be a pair, where cdr is a function of one
 argument (see `gdb-emit-signal')."
   `(add-to-list ',publisher ,subscriber))
+
+(defmacro gdb-delete-subscriber (publisher subscriber)
+  "Unregister SUBSCRIBER from PUBLISHER."
+  `(setq ,publisher (delete ,subscriber
+                            ,publisher)))
 
 (defun gdb-get-subscribers (publisher)
   publisher)
@@ -1860,7 +1887,7 @@ FILE is a full path."
     (define-key map "R" 'gdb-frame-registers-for-thread)
     map))
 
-(defun gdb-threads-mode ()
+(define-derived-mode gdb-threads-mode gdb-parent-mode "Threads"
   "Major mode for GDB threads.
 
 \\{gdb-threads-mode-map}"
@@ -2343,7 +2370,7 @@ corresponding to the mode line clicked."
                  'local-map gdb-memory-unit-map)))
   "Header line used in `gdb-memory-mode'.")
 
-(defun gdb-memory-mode ()
+(define-derived-mode gdb-memory-mode gdb-parent-mode "Memory"
   "Major mode for examining memory.
 
 \\{gdb-memory-mode-map}"
@@ -2430,7 +2457,7 @@ corresponding to the mode line clicked."
   ;; TODO
   (make-sparse-keymap))
 
-(defun gdb-disassembly-mode ()
+(define-derived-mode gdb-disassembly-mode gdb-parent-mode "Disassembly"
   "Major mode for GDB disassembly information.
 
 \\{gdb-disassembly-mode-map}"
@@ -2526,7 +2553,7 @@ corresponding to the mode line clicked."
 		     (set-window-dedicated-p (selected-window) t)))
 ))))
 
-(defun gdb-breakpoints-mode ()
+(define-derived-mode gdb-breakpoints-mode gdb-parent-mode "Breakpoints"
   "Major mode for gdb breakpoints.
 
 \\{gdb-breakpoints-mode-map}"
@@ -2674,7 +2701,7 @@ member."
   '(("in \\([^ ]+\\) of "  (1 font-lock-function-name-face)))
   "Font lock keywords used in `gdb-frames-mode'.")
 
-(defun gdb-frames-mode ()
+(define-derived-mode gdb-frames-mode gdb-parent-mode "Frames"
   "Major mode for gdb call stack.
 
 \\{gdb-frames-mode-map}"
@@ -2807,7 +2834,7 @@ member."
     (define-key map "q" 'kill-this-buffer)
      map))
 
-(defun gdb-locals-mode ()
+(define-derived-mode gdb-locals-mode gdb-parent-mode "Locals"
   "Major mode for gdb locals.
 
 \\{gdb-locals-mode-map}"
@@ -2875,7 +2902,7 @@ member."
     (define-key map "q" 'kill-this-buffer)
      map))
 
-(defun gdb-registers-mode ()
+(define-derived-mode gdb-frames-mode gdb-parent-mode "Registers"
   "Major mode for gdb registers.
 
 \\{gdb-registers-mode-map}"
