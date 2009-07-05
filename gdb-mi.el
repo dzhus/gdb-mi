@@ -897,13 +897,15 @@ INDENT is the current indentation depth."
   "Get a specific GDB buffer.
 
 In that buffer, `gdb-buffer-type' must be equal to KEY and
-`gdb-thread-number' (if provided) must be equal to THREAD."
+`gdb-thread-number' (if provided) must be equal to THREAD.
+
+When THREAD is nil, global `gdb-thread-number' value is used."
+  (when (not thread) (setq thread gdb-thread-number))
   (catch 'found
     (dolist (buffer (buffer-list) nil)
       (with-current-buffer buffer
         (when (and (eq gdb-buffer-type key)
-                   (or (not thread)
-                       (equal gdb-thread-number thread)))
+                   (equal gdb-thread-number thread))
           (throw 'found buffer))))))
 
 (defun gdb-get-buffer-create (key &optional thread)
