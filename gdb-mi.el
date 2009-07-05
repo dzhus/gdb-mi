@@ -991,7 +991,9 @@ DOC is an optional documentation string."
 (defun gdb-parent-mode ()
   "Generic mode to derive all other GDB buffer modes from."
   (setq buffer-read-only t)
+  (buffer-disable-undo)
   ;; Delete buffer from gdb-buf-publisher when it's killed
+  ;; (if it has an associated update trigger)
   (add-hook 
    'kill-buffer-hook
    (function
@@ -1902,10 +1904,6 @@ FILE is a full path."
   "Major mode for GDB threads.
 
 \\{gdb-threads-mode-map}"
-  (kill-all-local-variables)
-  (use-local-map gdb-threads-mode-map)
-  (setq buffer-read-only t)
-  (buffer-disable-undo)
   (setq gdb-thread-position (make-marker))
   (add-to-list 'overlay-arrow-variable-list 'gdb-thread-position)
   (setq header-line-format gdb-breakpoints-header)
@@ -2383,9 +2381,6 @@ corresponding to the mode line clicked."
   "Major mode for examining memory.
 
 \\{gdb-memory-mode-map}"
-  (kill-all-local-variables)
-  (use-local-map gdb-memory-mode-map)
-  (setq buffer-read-only t)
   (setq header-line-format gdb-memory-header)
   (set (make-local-variable 'font-lock-defaults)
        '(gdb-memory-font-lock-keywords))
@@ -2468,13 +2463,9 @@ corresponding to the mode line clicked."
   "Major mode for GDB disassembly information.
 
 \\{gdb-disassembly-mode-map}"
-  (kill-all-local-variables)
   (add-to-list 'overlay-arrow-variable-list 'gdb-overlay-arrow-position)
   (setq fringes-outside-margins t)
   (setq gdb-overlay-arrow-position (make-marker))
-  (use-local-map gdb-disassembly-mode-map)
-  (setq buffer-read-only t)
-  (buffer-disable-undo)
   (set (make-local-variable 'font-lock-defaults)
        '(gdb-disassembly-font-lock-keywords))
   (run-mode-hooks 'gdb-disassembly-mode-hook)
@@ -2562,10 +2553,6 @@ corresponding to the mode line clicked."
   "Major mode for gdb breakpoints.
 
 \\{gdb-breakpoints-mode-map}"
-  (kill-all-local-variables)
-  (use-local-map gdb-breakpoints-mode-map)
-  (setq buffer-read-only t)
-  (buffer-disable-undo)
   (setq header-line-format gdb-breakpoints-header)
   (run-mode-hooks 'gdb-breakpoints-mode-hook)
   'gdb-invalidate-breakpoints)
@@ -2708,13 +2695,9 @@ member."
   "Major mode for gdb call stack.
 
 \\{gdb-frames-mode-map}"
-  (kill-all-local-variables)
   (setq gdb-stack-position nil)
   (add-to-list 'overlay-arrow-variable-list 'gdb-stack-position)
   (setq truncate-lines t)  ;; Make it easier to see overlay arrow.
-  (setq buffer-read-only t)
-  (buffer-disable-undo)
-  (use-local-map gdb-frames-mode-map)
   (set (make-local-variable 'font-lock-defaults)
        '(gdb-frames-font-lock-keywords))
   (run-mode-hooks 'gdb-frames-mode-hook)
@@ -2839,11 +2822,7 @@ member."
   "Major mode for gdb locals.
 
 \\{gdb-locals-mode-map}"
-  (kill-all-local-variables)
-  (setq buffer-read-only t)
-  (buffer-disable-undo)
   (setq header-line-format gdb-locals-header)
-  (use-local-map gdb-locals-mode-map)
   (set (make-local-variable 'font-lock-defaults)
        '(gdb-locals-font-lock-keywords))
   (run-mode-hooks 'gdb-locals-mode-hook)
@@ -2905,11 +2884,7 @@ member."
   "Major mode for gdb registers.
 
 \\{gdb-registers-mode-map}"
-  (kill-all-local-variables)
   (setq header-line-format gdb-locals-header)
-  (setq buffer-read-only t)
-  (buffer-disable-undo)
-  (use-local-map gdb-registers-mode-map)
   (run-mode-hooks 'gdb-registers-mode-hook)
   'gdb-invalidate-registers)
 
