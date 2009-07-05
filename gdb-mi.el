@@ -109,7 +109,8 @@ Set to \"main\" at start if `gdb-show-main' is t.")
   "Main current thread.
 
 Invalidation triggers use this variable to query GDB for
-information on the specified thread.
+information on the specified thread by wrapping GDB/MI commands
+in `gdb-current-context-command'.
 
 This variable may be updated implicitly by GDB via
 `gdb-thread-list-handler-custom' or explicitly by
@@ -1547,14 +1548,22 @@ are not guaranteed."
     (dolist (field fields values)
       (setq values (append values (list (gdb-get-field struct field)))))))
 
-;; NAME is the function name.
-;; GDB-COMMAND is a string of such.  HANDLER-NAME is the function bound to the
-;; current input and buffer which recieved the trigger signal.
-;; Trigger must be bound to buffer via gdb-bind-function-to-buffer before use!
-;; See how it's done in gdb-get-buffer-create.
-
 (defmacro def-gdb-auto-update-trigger (trigger-name gdb-command
                                                     handler-name)
+  "Define a trigger TRIGGER-NAME which sends GDB-COMMAND and sets
+HANDLER-NAME as its handler. HANDLER-NAME is bound to current
+buffer with `gdb-bind-function-to-buffer'.
+
+Normally the trigger defined by this command must be called from
+the buffer where HANDLER-NAME must work. This should be done so
+that buffer-local thread number may be used in GDB-COMMAND (by
+calling `gdb-current-context-command').
+`gdb-bind-function-to-buffer' is used to achieve this, see how
+it's done in `gdb-get-buffer-create'.
+
+Triggers defined by this command are meant to be used as a
+trigger argument when describing buffer types with
+`gdb-set-buffer-rules'."
   `(defun ,trigger-name (&optional signal)
      (if (not (gdb-pending-p
                (cons (current-buffer) ',trigger-name)))
@@ -1582,9 +1591,11 @@ erase current buffer and evaluate CUSTOM-DEFUN."
 				       handler-name custom-defun)
   "Define trigger and handler.
 
-TRIGGER-NAME trigger is defined to send GDB-COMMAND.
+TRIGGER-NAME trigger is defined to send GDB-COMMAND. See
+`def-gdb-auto-update-trigger'.
 
-HANDLER-NAME handler uses customization of CUSTOM-DEFUN."
+HANDLER-NAME handler uses customization of CUSTOM-DEFUN. See
+`def-gdb-auto-update-handler'."
   `(progn
      (def-gdb-auto-update-trigger ,trigger-name
        ,gdb-command
@@ -2970,13 +2981,15 @@ is set in them."
   (gdb-force-mode-line-update
    (propertize "ready" 'face font-lock-variable-name-face)))
 
+;; This function is different from other triggers because it is not
+;; bound to any specific buffer
 (defun gdb-get-selected-frame ()
   (if (not (gdb-pending-p 'gdb-get-selected-frame))
       (progn
 	(gdb-input
 	 (list (gdb-current-context-command "-stack-info-frame") 'gdb-frame-handler))
 	(push 'gdb-get-selected-frame
-	       gdb-pending-triggers))))
+              gdb-pending-triggers))))
 
 (defun gdb-frame-handler ()
   (gdb-delete-pending 'gdb-get-selected-frame)
