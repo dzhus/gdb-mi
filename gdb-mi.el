@@ -1,14 +1,12 @@
 ;;; gdb-mi.el --- User Interface for running GDB
 
-;; Author: Nick Roberts <nickrob@gnu.org>, Dmitry Dzhus <dima@sphinx.net.ru>
-;; Maintainer: Nick Roberts <nickrob@gnu.org>
-;; Keywords: unix, tools
-
 ;; Copyright (C) 2007, 2008, 2009 Free Software Foundation, Inc.
 
-;; This file will become part of GNU Emacs.
-;; Version 0.5 from ELPA archive.
-;; Use with gud.el from the same archive.
+;; Author: Nick Roberts <nickrob@gnu.org>
+;; Maintainer: FSF
+;; Keywords: unix, tools
+
+;; This file is part of GNU Emacs.
 
 ;; GNU Emacs is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -22,6 +20,13 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+
+;;; Credits:
+
+;; This file was written by by Nick Roberts following the general design
+;; used in gdb-ui.el for Emacs 22.1 - 23.1.  It is currently being developed
+;; by Dmitry Dzhus <dima@sphinx.net.ru> as part of the Google Summer
+;; of Code 2009 Project "Emacs GDB/MI migration".
 
 ;;; Commentary:
 
@@ -47,7 +52,7 @@
 ;; doesn't update properly when execution commands are issued from GUD buffer)
 ;; and WORKS BEST when GDB runs asynchronously: maint set linux-async on.
 ;;
-;; You need development version of GDB 7.0 for this code to work properly.
+;; You need development version of GDB 7.0 for the thread buffer to work.
 
 ;; This file replaces gdb-ui.el and is for development with GDB.  Use the
 ;; release branch of Emacs 22 for the latest version of gdb-ui.el.
@@ -72,6 +77,13 @@
 ;;        (Since 22.1 Emacs builds under Cygwin.)
 ;;   2) Use MinGW GDB instead.
 ;;   3) Use cygwin-mount.el
+
+;;; Mac OSX:
+
+;; GDB in Emacs on Mac OSX works best with FSF GDB as Apple have made
+;; some changes to the version that they include as part of Mac OSX.
+;; This requires GDB version 7.0 or later (estimated release date Aug 2009)
+;; as earlier versions don not compile on Mac OSX.
 
 ;;; Known Bugs:
 
@@ -191,6 +203,18 @@ predefined macros."
   :type 'string
   :group 'gdb
   :version "22.1")
+
+ (defcustom gdb-create-source-file-list t
+   "Non-nil means create a list of files from which the executable was built.
+ Set this to nil if the GUD buffer displays \"initializing...\" in the mode
+ line for a long time when starting, possibly because your executable was
+ built from a large number of files.  This allows quicker initialization
+ but means that these files are not automatically enabled for debugging,
+ e.g., you won't be able to click in the fringe to set a breakpoint until
+ execution has already stopped there."
+   :type 'boolean
+   :group 'gdb
+   :version "23.1")
 
 (defcustom gdb-show-main nil
   "Non-nil means display source file containing the main routine at startup.
@@ -457,15 +481,14 @@ detailed description of this mode.
   (gdb-input
    ; Needs GDB 6.2 onwards.
    (list "-file-list-exec-source-files\n" 'gdb-get-source-file-list))
-  (gdb-input
-   ; Needs GDB 6.0 onwards.
-   (list "-file-list-exec-source-file\n" 'gdb-get-source-file))
+  (if gdb-create-source-file-list
+      (gdb-input
+        ; Needs GDB 6.0 onwards.
+       (list "-file-list-exec-source-file\n" 'gdb-get-source-file)))
   (gdb-input
    (list "-data-list-register-names\n" 'gdb-get-register-names))
   (gdb-input
-   (list "-gdb-show prompt\n" 'gdb-get-prompt))
-  ;;
-  (run-hooks 'gdb-mode-hook))
+   (list "-gdb-show prompt\n" 'gdb-get-prompt)))
 
 (defvar gdb-define-alist nil "Alist of #define directives for GUD tooltips.")
 
@@ -475,17 +498,23 @@ detailed description of this mode.
 	 (output
 	  (with-output-to-string
 	    (with-current-buffer standard-output
-	      (call-process shell-file-name
-			    (if (file-exists-p file) file nil)
-			    (list t nil) nil "-c"
-			    (concat gdb-cpp-define-alist-program " "
-				    gdb-cpp-define-alist-flags)))))
+ 	      (and file
+		   (file-exists-p file)
+ 		   ;; call-process doesn't work with remote file names.
+		   (not (file-remote-p default-directory))
+ 		   (call-process shell-file-name file
+				 (list t nil) nil "-c"
+				 (concat gdb-cpp-define-alist-program " "
+					 gdb-cpp-define-alist-flags))))))
 	(define-list (split-string output "\n" t))
 	(name))
     (setq gdb-define-alist nil)
     (dolist (define define-list)
       (setq name (nth 1 (split-string define "[( ]")))
       (push (cons name define) gdb-define-alist))))
+
+(declare-function tooltip-show "tooltip" (text &optional use-echo-area))
+(defvar tooltip-use-echo-area)
 
 (defun gdb-tooltip-print (expr)
   (tooltip-show
@@ -497,8 +526,9 @@ detailed description of this mode.
 	      (buffer-string))))
        ;; remove newline for gud-tooltip-echo-area
        (substring string 0 (- (length string) 1))))
-   (or gud-tooltip-echo-area tooltip-use-echo-area)))
-
+   (or gud-tooltip-echo-area tooltip-use-echo-area
+       (not (display-graphic-p)))))
+ 
 ;; If expr is a macro for a function don't print because of possible dangerous
 ;; side-effects. Also printing a function within a tooltip generates an
 ;; unexpected starting annotation (phase error).
@@ -1086,6 +1116,9 @@ static char *magick[] = {
 (defvar breakpoint-disabled-icon nil
   "Icon for disabled breakpoint in display margin.")
 
+(declare-function define-fringe-bitmap "fringe.c"
+		  (bitmap bits &optional height width align))
+
 (and (display-images-p)
      ;; Bitmap for breakpoint in fringe
      (define-fringe-bitmap 'breakpoint
@@ -1246,8 +1279,8 @@ static char *magick[] = {
 
     (dolist (output-record output-record-list)
       (let ((record-type (cadr output-record))
-	    (arg1 (caddr output-record))
-	    (arg2 (cadddr output-record)))
+	    (arg1 (nth 2 output-record))
+	    (arg2 (nth 3 output-record)))
 	(if (eq record-type 'gdb-error)
 	    (gdb-done-or-error arg2 arg1 'error)
 	  (if (eq record-type 'gdb-done)
@@ -1624,6 +1657,10 @@ of the current session."
 	  (with-current-buffer (find-buffer-visiting buffer-file-name)
 	    (gdb-init-buffer)))))
 
+(declare-function gud-remove "gdb-mi" t t) ; gud-def
+(declare-function gud-break  "gdb-mi" t t) ; gud-def
+(declare-function fringe-bitmaps-at-pos "fringe.c" (&optional pos window))
+
 (defun gdb-mouse-set-clear-breakpoint (event)
   "Set/clear breakpoint in left fringe/margin at mouse click.
 If not in a source or disassembly buffer just set point."
@@ -1734,6 +1771,7 @@ corresponding to the mode line clicked."
     map))
 
 
+;; uses "-thread-info". Needs GDB 7.0 onwards.
 ;;; Threads view
 
 (defun gdb-jump-to (file line)
@@ -2474,12 +2512,16 @@ is set in them."
     (if answer
 	(display-buffer buf nil (or frame 0)) ;Deiconify the frame if necessary.
       (let ((window (get-lru-window)))
-	(let* ((largest (get-largest-window))
-	       (cur-size (window-height largest)))
-	  (setq answer (split-window largest))
-	  (set-window-buffer answer buf)
-	  (set-window-dedicated-p answer dedicated)))
-      answer)))
+	(if (eq (buffer-local-value 'gud-minor-mode (window-buffer window))
+		  'gdbmi)
+	    (let* ((largest (get-largest-window))
+		   (cur-size (window-height largest)))
+	      (setq answer (split-window largest))
+	      (set-window-buffer answer buf)
+	      (set-window-dedicated-p answer dedicated)
+	      answer)
+	  (set-window-buffer window buf)
+	  window)))))
 
 
 ;;; Shared keymap initialization:
@@ -2493,7 +2535,7 @@ is set in them."
 ;  (define-key menu [memory] '("Memory" . gdb-display-memory-buffer))
   (define-key menu [memory] '("Memory" . gdb-todo-memory))
   (define-key menu [disassembly]
-    '("Disassembly" . gdb-display-assembler-buffer))
+    '("Disassembly" . gdb-display-disassembly-buffer))
   (define-key menu [registers] '("Registers" . gdb-display-registers-buffer))
   (define-key menu [inferior]
     '(menu-item "Separate IO" gdb-display-separate-io-buffer
@@ -2511,7 +2553,7 @@ is set in them."
   (define-key menu [threads] '("Threads" . gdb-frame-threads-buffer))
 ;  (define-key menu [memory] '("Memory" . gdb-frame-memory-buffer))
   (define-key menu [memory] '("Memory" . gdb-todo-memory))
-  (define-key menu [disassembly] '("Disassembly" . gdb-frame-assembler-buffer))
+  (define-key menu [disassembly] '("Disassembly" . gdb-frame-disassembly-buffer))
   (define-key menu [registers] '("Registers" . gdb-frame-registers-buffer))
   (define-key menu [inferior]
     '(menu-item "Separate IO" gdb-frame-separate-io-buffer
@@ -2786,4 +2828,5 @@ BUFFER nil or omitted means use the current buffer."
 
 (provide 'gdb-mi)
 
+;; arch-tag: 1b41ea2b-f364-4cec-8f35-e02e4fe01912
 ;;; gdb-mi.el ends here
