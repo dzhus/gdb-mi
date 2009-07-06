@@ -2835,7 +2835,9 @@ member."
 			      value))
 		       (insert
 			(concat name "\t" type
-				"\t" value "\n"))))))
+				"\t" value "\n"))))
+    (setq mode-name
+          (concat "Locals: " (gdb-get-field (gdb-current-buffer-frame) 'func)))))
 
 (defvar gdb-locals-header
  `(,(propertize "Locals"

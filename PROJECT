@@ -122,8 +122,9 @@
    `gdb-threads-list` for that.
    
 ** TODO Frames list buffers
-** TODO Locals buffers
-   - [ ] include frame in mode name
+** DONE Locals buffers
+   CLOSED: [2009-07-07 Втр 00:11]
+   - [X] include frame in mode name
 ** DONE Disassembly buffers
    CLOSED: [2009-07-06 Пнд 23:48]
    - [X] include frame in mode name 
