@@ -94,8 +94,6 @@
 (defvar tool-bar-map)
 (defvar speedbar-initial-expansion-list-name)
 
-(defvar gdb-pc-address nil "Initialization for Assembler buffer.
-Set to \"main\" at start if `gdb-show-main' is t.")
 (defvar	gdb-memory-address "main")
 (defvar	gdb-memory-last-address nil
   "Last successfully accessed memory address.")
@@ -469,7 +467,6 @@ detailed description of this mode.
     'gdb-mouse-jump)
   ;;
   ;; (re-)initialise
-  (setq gdb-pc-address (if gdb-show-main "main" nil))
   (setq gdb-selected-frame nil
 	gdb-frame-number nil
 	gdb-var-list nil
@@ -3010,14 +3007,12 @@ thread. Called from `gdb-update'."
 	(gdb-add-pending 'gdb-get-main-selected-frame))))
 
 (defun gdb-frame-handler ()
-  "Sets `gdb-frame-number', `gdb-pc-address',
-  `gdb-selected-frame' and `gdb-selected-file' to show overlay
-  arrow in source buffer."
+  "Sets `gdb-pc-address', `gdb-selected-frame' and
+  `gdb-selected-file' to show overlay arrow in source buffer."
   (gdb-delete-pending 'gdb-get-main-selected-frame)
   (let ((frame (gdb-get-field (json-partial-output) 'frame)))
     (when frame
       (setq gdb-frame-number (gdb-get-field frame 'level))
-      (setq gdb-pc-address (gdb-get-field frame 'addr))
       (setq gdb-selected-frame (gdb-get-field frame 'func))
       (setq gdb-selected-file (gdb-get-field frame 'fullname))
       (let ((line (gdb-get-field frame 'line)))
