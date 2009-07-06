@@ -5,9 +5,8 @@
 ## f for bugs, r for parts which need refactoring, n for new features
 
 * Being DRY
-** TODO Derive buffers mode from one generic mode                  :redesign:
-   There's too much copy&paste in code for modes of various GDB
-   buffers.
+** DONE Derive buffers mode from one generic mode                  :redesign:
+   CLOSED: [2009-07-05 Вск 22:13]
 
 ** DONE Write `gdb-def-frame-for-buffer`
    To define `gdb-frame-*-buffer` functions
@@ -15,18 +14,12 @@
 ** DONE Write `gdb-def-display-buffer`
    CLOSED: [2009-06-21 Вск 18:33]
    To define `gdb-display-*-buffer` functions
-  
-
-** IN PROGRESS Use `gdb-auto-update-handler`/`gdb-auto-updated-buffer` more
-
-** TODO Use `def-gdb-auto-update-handler`
-   See also gdb-ui.el for `def-gdb-auto-updated-buffer`
 
 * Broken glass
 ** DONE gdb-display-locals-buffer
    CLOSED: [2009-06-21 Вск 17:51]
    Undefined
-** TODO gdb-many-windows
+** DONE gdb-many-windows
    Broken
    
 * Object approach
@@ -34,12 +27,21 @@
 *** DONE Frames list handler
     Ditch `gdb-stack-list-frames-regexp`, hack
     `gdb-stack-list-frames-handler` and `gdb-frame-handler`.
-
+*** DONE Abandon fadr
+    CLOSED: [2009-06-27 Сбт]
+    Use `bindat-get-field` instead.
+*** DONE Breakpoints
+    CLOSED: [2009-06-28 Вск 00:44]
+    Rewrite `gdb-break-list-handler` using `gdb-get-field`. Introduce
+    new variable `gdb-break-list` with all breakpoints data to avoid
+    reparsing breakpoints buffer every time we need to add breakpoint
+    icons on fringes etc.
 * New buffers
-** IN PROGRESS [1/3] Threads
+** DONE [3/3] Threads
+   CLOSED: [2009-07-03 Птн 21:20]
    - [X] basic information
-   - [ ] keymap
-   - [ ] current thread selection
+   - [X] keymap
+   - [X] current thread selection
 ** IN PROGRESS Disassembly
    - [X] basic information
          
@@ -50,14 +52,11 @@
          `gdb-selected-line`, both set in `gdb-frame-handler`.
          See also [[Stack information handling]].
 
-   - [ ] alignment sucks
+   - [X] alignment
 
-         Add more tabs after `<function_name+offset>:`?
+   - [X] breakpoints
 
-   - [ ] breakpoints
-
-   - [ ] do not update disassembly buffer if the current function
-         hasn't changed since last operation
+   - [X] overlay arrow
 
    - [ ] disassemble function around point, not just the current one
 
@@ -66,43 +65,71 @@
          buffer to put disassembly data in
          
    - [ ] keymap
+
+   - [ ] when the program is not running, disassembly should display
+     `main`, not the first function from `gdb-main-file`
          
    - [ ] hyperlinks for jump instructions
 
          Add clickable buttons for `jmp`, `jl` arguments
    
-** TODO Data memory                                                     :new:
-   - [ ] basic information
-   - [ ] keymap
+** IN PROGRESS Program memory                                           :new:
+   - [X] basic information
+   - [X] keymap
+   - [X] header
+   - [X] alignment
+         
+   - [ ] show function name instead of just address
+         
+         MI does not provide function name in `-data-read-memory`
+         output =\ `[[-symbol-info-symbol]]` should allow this, but it's
+         not implemented yet.
 
 * GDB+Emacs interface improvements
-
+  
 * Overall UI improvements                                                :ui:
 ** TODO Improve `gdb-jump-to`
    See also `gud-display-line` for implementation ideas
-** TODO Think of a better header
-   This applies to other buffers as well
+** TODO Headers
 
 * Multiple threads support                                         :redesign:
-** TODO Buffer model review
+** IN PROGRESS Buffer model review
    Several new concepts for GDB buffers must be introduced:
    
-   - [ ] buffer-local variable with a number of thread this buffer shows
+   - [X] buffer-local variable with a number of thread this buffer shows
      information for
 
    - [ ] same for frame number
 
-   - [ ] extend `gdb-get-buffer-create` etc. to allow working with
+   - [X] extend `gdb-get-buffer-create` etc. to allow working with
      buffers of the same type (like frames list) for several threads
      simultaneously
 
    - [ ] make sure thread selection interface is clear and intuitive
 
-   - [ ] include thread information in buffer names to avoid confusion
-** TODO Stack information
+   - [X] include thread information in buffer names to avoid confusion
+** DONE Stack information
+   CLOSED: [2009-07-04 Сбт 20:25]
    There must be some way to examine stack info for different threads
-
-* IN PROGRESS Stack information handling                           :redesign:
+** DONE [#A] Delete dead subscribers from `gdb-buf-publisher`
+   CLOSED: [2009-07-05 Вск 22:13]
+   See `kill-buffer-hook`. May be set for all GDB buffers when they're
+   all derived from [[generic mode]].
+** IN PROGRESS Get frame information for each thread separately
+   `-thread-info` command output contains frame information for every
+   thread. We should use it to show actual information in buffers
+   which need stack information (frames list, disassembly). We use
+   `gdb-threads-list` for that.
+   
+** TODO Frames list buffers
+** DONE Locals buffers
+   CLOSED: [2009-07-07 Втр 00:11]
+   - [X] include frame in mode name
+** DONE Disassembly buffers
+   CLOSED: [2009-07-06 Пнд 23:48]
+   - [X] include frame in mode name 
+   - [X] fix breakpoints showing lag
+* IN PROGRESS [#A] Stack information handling                      :redesign:
   `gdb-frame-handler` is not robust. Must think of how should gdb-mi
   act when we stop in a routine w/o line info. Currently we simply
   don't reset `gud-last-frame` in this case. Disassembly buffer falls
@@ -123,4 +150,14 @@
   Unclear parts of code which I don't fully understand yet.
 ** gud-last-frame
 ** gdb-pending-triggers
+** Why call ignored `list` command in `gdb-place-breakpoints`?
 
+* Cleaning the code
+  Some functions and concepts need review and possibly rewrite.
+
+** TODO gdb-place-breakpoints
+* GDB
+** TODO Send `-symbol-info-symbol` patch
+   [[file:~/projects/gdb-trunk/symbol-info-symbol.diff]]
+** TODO Write `-stack-list-locals-and-args`
+** TODO Add current frame data to `-stack
