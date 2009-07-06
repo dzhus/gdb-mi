@@ -917,11 +917,11 @@ INDENT is the current indentation depth."
 
 (defun gdb-current-buffer-thread ()
   "Get thread of current buffer from `gdb-threads-list'."
-  (assoc gdb-thread-number gdb-threads-list))
+  (cdr (assoc gdb-thread-number gdb-threads-list)))
 
 (defun gdb-current-buffer-frame ()
-  "Get current frame for thread of current buffer."
-  (gdb-get-field (gdb-get-current-buffer-thread) 'thread))
+  "Get current stack frame for thread of current buffer."
+  (gdb-get-field (gdb-current-buffer-thread) 'frame))
 
 (defun gdb-get-buffer (key &optional thread)
   "Get a specific GDB buffer.
@@ -2473,12 +2473,11 @@ corresponding to the mode line clicked."
  "Display disassembly in a new frame.")
 
 (def-gdb-auto-update-trigger gdb-invalidate-disassembly
-  (let* ((thread (cdr (assoc gdb-thread-number gdb-threads-list)))
-         (frame (gdb-get-field thread 'frame)))
-    (let ((file (gdb-get-field frame 'file))
-          (line (gdb-get-field frame 'line)))
-      (when file
-        (format "-data-disassemble -f %s -l %s -n -1 -- 0" file line))))
+  (let* ((frame (gdb-current-buffer-frame))
+         (file (gdb-get-field frame 'file))
+         (line (gdb-get-field frame 'line)))
+    (when file
+      (format "-data-disassemble -f %s -l %s -n -1 -- 0" file line)))
   gdb-disassembly-handler)
 
 (def-gdb-auto-update-handler
@@ -2524,18 +2523,19 @@ corresponding to the mode line clicked."
   'gdb-invalidate-disassembly)
 
 (defun gdb-disassembly-handler-custom ()
-  (let* ((res (json-partial-output))
+  (let* ((pos 1)
+         (address (gdb-get-field (gdb-current-buffer-frame) 'addr))
+         (res (json-partial-output))
          (instructions (gdb-get-field res 'asm_insns))
-         (pos 1))
-    (let* ((last-instr (car (last instructions)))
-           (column-padding (+ 2 (string-width
-                                 (apply 'format
-                                        `("<%s+%s>:"
-                                          ,@(gdb-get-many-fields last-instr 'func-name 'offset)))))))
+         (last-instr (car (last instructions)))
+         (column-padding (+ 2 (string-width
+                               (apply 'format
+                                      `("<%s+%s>:"
+                                        ,@(gdb-get-many-fields last-instr 'func-name 'offset)))))))
       (dolist (instr instructions)
       ;; Put overlay arrow
       (when (string-equal (gdb-get-field instr 'address)
-                          gdb-pc-address)
+                          address)
         (progn
           (setq pos (point))
           (setq fringe-indicator-alist
@@ -2547,13 +2547,16 @@ corresponding to the mode line clicked."
        (concat
         (gdb-get-field instr 'address)
         " "
-        (gdb-pad-string (apply 'format `("<%s+%s>:"  ,@(gdb-get-many-fields instr 'func-name 'offset)))
+        (gdb-pad-string (apply 'format `("<%s+%s>:" ,@(gdb-get-many-fields instr 'func-name 'offset)))
                         (- column-padding))
         (gdb-get-field instr 'inst)
         "\n")))
       (gdb-disassembly-place-breakpoints)
       (let ((window (get-buffer-window (current-buffer) 0)))
-        (set-window-point window pos)))))
+        (set-window-point window pos))
+      (setq mode-name
+            (concat "Disassembly: " 
+                    (gdb-get-field (gdb-current-buffer-frame) 'func)))))
 
 (defun gdb-disassembly-place-breakpoints ()
   (gdb-remove-breakpoint-icons (point-min) (point-max))

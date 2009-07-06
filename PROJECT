@@ -124,8 +124,9 @@
 ** TODO Frames list buffers
 ** TODO Locals buffers
    - [ ] include frame in mode name
-** TODO Disassembly buffers
-   - [ ] include frame in mode name 
+** DONE Disassembly buffers
+   CLOSED: [2009-07-06 Пнд 23:48]
+   - [X] include frame in mode name 
    - [X] fix breakpoints showing lag
 * IN PROGRESS [#A] Stack information handling                      :redesign:
   `gdb-frame-handler` is not robust. Must think of how should gdb-mi
