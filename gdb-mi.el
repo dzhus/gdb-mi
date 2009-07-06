@@ -904,7 +904,7 @@ INDENT is the current indentation depth."
                                         gdb-buffer-rules))))
     (when f (rename-buffer (funcall f)))))
 
-(defun gdb-get-current-buffer-rules ()
+(defun gdb-current-buffer-rules ()
   "Get `gdb-buffer-rules' entry for current buffer type."
   (assoc gdb-buffer-type gdb-buffer-rules))
 
