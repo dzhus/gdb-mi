@@ -1282,7 +1282,7 @@ Option value is taken from `gdb-thread-number'."
 
 SUBSCRIBER must be a pair, where cdr is a function of one
 argument (see `gdb-emit-signal')."
-  `(add-to-list ',publisher ,subscriber))
+  `(add-to-list ',publisher ,subscriber t))
 
 (defmacro gdb-delete-subscriber (publisher subscriber)
   "Unregister SUBSCRIBER from PUBLISHER."
