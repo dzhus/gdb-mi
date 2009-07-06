@@ -116,9 +116,16 @@ This variable may be updated implicitly by GDB via
 `gdb-thread-list-handler-custom' or explicitly by
 `gdb-select-thread'.")
 
-(defvar gdb-selected-frame nil)
-(defvar gdb-selected-file nil)
-(defvar gdb-selected-line nil)
+;; Used to show overlay arrow in source buffer. All set in
+;; gdb-get-main-selected-frame. Disassembly buffer should not use
+;; these but rely on buffer-local thread information instead.
+(defvar gdb-selected-frame nil
+  "Name of selected function for main current thread.")
+(defvar gdb-selected-file nil
+  "Name of selected file for main current thread.")
+(defvar gdb-selected-line nil
+  "Number of selected line for main current thread.")
+
 (defvar gdb-threads-list nil
   "Associative list of threads provided by \"-thread-info\" MI command.
 
@@ -907,6 +914,14 @@ INDENT is the current indentation depth."
 (defun gdb-current-buffer-rules ()
   "Get `gdb-buffer-rules' entry for current buffer type."
   (assoc gdb-buffer-type gdb-buffer-rules))
+
+(defun gdb-current-buffer-thread ()
+  "Get thread of current buffer from `gdb-threads-list'."
+  (assoc gdb-thread-number gdb-threads-list))
+
+(defun gdb-current-buffer-frame ()
+  "Get current frame for thread of current buffer."
+  (gdb-get-field (gdb-get-current-buffer-thread) 'thread))
 
 (defun gdb-get-buffer (key &optional thread)
   "Get a specific GDB buffer.
@@ -1915,6 +1930,8 @@ FILE is a full path."
     (define-key map "L" 'gdb-frame-locals-for-thread)
     (define-key map "r" 'gdb-display-registers-for-thread)
     (define-key map "R" 'gdb-frame-registers-for-thread)
+    (define-key map "d" 'gdb-display-disassembly-for-thread)
+    (define-key map "D" 'gdb-frame-disassembly-for-thread)
     map))
 
 (define-derived-mode gdb-threads-mode gdb-parent-mode "Threads"
@@ -2011,6 +2028,11 @@ on the current line."
   "Display registers buffer for the thread at current line.")
 
 (def-gdb-thread-buffer-simple-command
+  gdb-display-disassembly-for-thread
+  gdb-display-disassembly-buffer
+  "Display disassembly buffer for the thread at current line.")
+
+(def-gdb-thread-buffer-simple-command
   gdb-frame-stack-for-thread
   gdb-frame-stack-buffer
   "Display a new frame with stack buffer for the thread at
@@ -2026,6 +2048,12 @@ current line.")
   gdb-frame-registers-for-thread
   gdb-frame-registers-buffer
   "Display a new frame with registers buffer for the thread at
+current line.")
+
+(def-gdb-thread-buffer-simple-command
+  gdb-frame-disassembly-for-thread
+  gdb-frame-disassembly-buffer
+  "Display a new frame with disassembly buffer for the thread at
 current line.")
 
 
@@ -2431,7 +2459,8 @@ corresponding to the mode line clicked."
 ;;; Disassembly view
 
 (defun gdb-disassembly-buffer-name ()
-  (concat "*disassembly of " (gdb-get-target-string) "*"))
+  (gdb-current-context-buffer-name
+   (concat "disassembly of " (gdb-get-target-string))))
 
 (def-gdb-display-buffer
  gdb-display-disassembly-buffer
@@ -2446,10 +2475,10 @@ corresponding to the mode line clicked."
 (def-gdb-auto-update-trigger gdb-invalidate-disassembly
   (let* ((thread (cdr (assoc gdb-thread-number gdb-threads-list)))
          (frame (gdb-get-field thread 'frame)))
-    (let ((file (or (gdb-get-field frame 'file) gdb-main-file))
-          (line (or (gdb-get-field frame 'line) 1)))
-    (if (not file) (error "Disassembly invalidated with no file selected.") ; never happens
-      (format "-data-disassemble -f %s -l %s -n -1 -- 0" file line))))
+    (let ((file (gdb-get-field frame 'file))
+          (line (gdb-get-field frame 'line)))
+      (when file
+        (format "-data-disassemble -f %s -l %s -n -1 -- 0" file line))))
   gdb-disassembly-handler)
 
 (def-gdb-auto-update-handler
@@ -2966,10 +2995,9 @@ is set in them."
   (gdb-force-mode-line-update
    (propertize "ready" 'face font-lock-variable-name-face)))
 
-;; This function is different from other triggers because it is not
-;; bound to any specific buffer. We use this function only to set
-;; overlay arrow in source file buffer. Current main thread is used.
 (defun gdb-get-main-selected-frame ()
+  "Trigger for `gdb-frame-handler' which uses main current
+thread. Called from `gdb-update'."
   (if (not (gdb-pending-p 'gdb-get-main-selected-frame))
       (progn
 	(gdb-input
@@ -2977,6 +3005,9 @@ is set in them."
 	(gdb-add-pending 'gdb-get-main-selected-frame))))
 
 (defun gdb-frame-handler ()
+  "Sets `gdb-frame-number', `gdb-pc-address',
+  `gdb-selected-frame' and `gdb-selected-file' to show overlay
+  arrow in source buffer."
   (gdb-delete-pending 'gdb-get-main-selected-frame)
   (let ((frame (gdb-get-field (json-partial-output) 'frame)))
     (when frame
