@@ -1049,14 +1049,15 @@ DOC is an optional documentation string."
    (function
     (lambda ()
       (let ((trigger (gdb-rules-update-trigger
-                      (gdb-get-current-buffer-rules))))
+                      (gdb-current-buffer-rules))))
         (when trigger
           (gdb-delete-subscriber 
            gdb-buf-publisher
            ;; This should match gdb-add-subscriber done in
            ;; gdb-get-buffer-create
            (cons (current-buffer)
-                 (gdb-bind-function-to-buffer trigger (current-buffer))))))))))
+                 (gdb-bind-function-to-buffer trigger (current-buffer))))))))
+   nil t))
 
 ;; GUD buffers are an exception to the rules
 (gdb-set-buffer-rules 'gdbmi 'error)
