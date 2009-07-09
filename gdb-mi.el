@@ -931,9 +931,9 @@ INDENT is the current indentation depth."
 (defun gdb-rules-name-maker (rules-entry)
   (cadr rules-entry))
 (defun gdb-rules-buffer-mode (rules-entry)
-  (nth 3 rules-entry))
+  (nth 2 rules-entry))
 (defun gdb-rules-update-trigger (rules-entry)
-  (nth 4 rules-entry))
+  (nth 3 rules-entry))
 
 (defun gdb-update-buffer-name ()
   (let ((f (gdb-rules-name-maker (assoc gdb-buffer-type
