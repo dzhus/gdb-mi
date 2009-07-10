@@ -1,41 +1,15 @@
 -*-org-*-
 
-#+TAGS: fix(f) redesign(r) new(n) ui(u) needinfo(i) 
+#+TAGS: threads(t) ui(u)
 
 ## f for bugs, r for parts which need refactoring, n for new features
 
 * Being DRY
-** DONE Derive buffers mode from one generic mode                  :redesign:
-   CLOSED: [2009-07-05 Вск 22:13]
-
-** DONE Write `gdb-def-frame-for-buffer`
-   To define `gdb-frame-*-buffer` functions
-  
-** DONE Write `gdb-def-display-buffer`
-   CLOSED: [2009-06-21 Вск 18:33]
-   To define `gdb-display-*-buffer` functions
 
 * Broken glass
-** DONE gdb-display-locals-buffer
-   CLOSED: [2009-06-21 Вск 17:51]
-   Undefined
-** DONE gdb-many-windows
-   Broken
    
 * Object approach
 ** Rewrite existing buffers
-*** DONE Frames list handler
-    Ditch `gdb-stack-list-frames-regexp`, hack
-    `gdb-stack-list-frames-handler` and `gdb-frame-handler`.
-*** DONE Abandon fadr
-    CLOSED: [2009-06-27 Сбт]
-    Use `bindat-get-field` instead.
-*** DONE Breakpoints
-    CLOSED: [2009-06-28 Вск 00:44]
-    Rewrite `gdb-break-list-handler` using `gdb-get-field`. Introduce
-    new variable `gdb-break-list` with all breakpoints data to avoid
-    reparsing breakpoints buffer every time we need to add breakpoint
-    icons on fringes etc.
 * New buffers
 ** DONE [3/3] Threads
    CLOSED: [2009-07-03 Птн 21:20]
@@ -73,7 +47,7 @@
 
          Add clickable buttons for `jmp`, `jl` arguments
    
-** IN PROGRESS Program memory                                           :new:
+** IN PROGRESS Program memory
    - [X] basic information
    - [X] keymap
    - [X] header
@@ -87,12 +61,13 @@
 
 * GDB+Emacs interface improvements
   
-* Overall UI improvements                                                :ui:
+* Overall UI improvements
 ** TODO Improve `gdb-jump-to`
    See also `gud-display-line` for implementation ideas
 ** TODO Headers
+** TODO 
 
-* Multiple threads support                                         :redesign:
+* Multiple threads support
 ** IN PROGRESS Buffer model review
    Several new concepts for GDB buffers must be introduced:
    
@@ -108,20 +83,8 @@
    - [ ] make sure thread selection interface is clear and intuitive
 
    - [X] include thread information in buffer names to avoid confusion
-** DONE Stack information
-   CLOSED: [2009-07-04 Сбт 20:25]
-   There must be some way to examine stack info for different threads
-** DONE [#A] Delete dead subscribers from `gdb-buf-publisher`
-   CLOSED: [2009-07-05 Вск 22:13]
-   See `kill-buffer-hook`. May be set for all GDB buffers when they're
-   all derived from [[generic mode]].
-** IN PROGRESS Get frame information for each thread separately
-   `-thread-info` command output contains frame information for every
-   thread. We should use it to show actual information in buffers
-   which need stack information (frames list, disassembly). We use
-   `gdb-threads-list` for that.
    
-** TODO Frames list buffers
+** DONE Frames list buffers
 ** DONE Locals buffers
    CLOSED: [2009-07-07 Втр 00:11]
    - [X] include frame in mode name
@@ -161,3 +124,5 @@
    [[file:~/projects/gdb-trunk/symbol-info-symbol.diff]]
 ** TODO Write `-stack-list-locals-and-args`
 ** TODO Add current frame data to `-stack
+** TODO Report that `-break-info` has broken `script` field
+   http://emacsbugs.donarmstrong.com/cgi-bin/bugreport.cgi?bug=3794
