@@ -534,8 +534,6 @@ detailed description of this mode.
         ; Needs GDB 6.0 onwards.
        (list "-file-list-exec-source-file" 'gdb-get-source-file)))
   (gdb-input
-   (list "-data-list-register-names" 'gdb-register-names-handler))
-  (gdb-input
    (list "-gdb-show prompt" 'gdb-get-prompt)))
 
 (defvar gdb-define-alist nil "Alist of #define directives for GUD tooltips.")
@@ -1460,7 +1458,7 @@ valid signal handlers.")
 (defun gdb-starting (output-field)
   ;; CLI commands don't emit ^running at the moment so use gdb-running too.
   (gdb-input
-   (list "-data-list-register-names" 'gdb-get-register-names))
+   (list "-data-list-register-names" 'gdb-register-names-handler))
   (setq gdb-inferior-status "running")
   (gdb-force-mode-line-update
    (propertize gdb-inferior-status 'face font-lock-type-face))
