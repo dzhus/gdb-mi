@@ -2058,7 +2058,8 @@ on the current line."
       (error "Cannot select running thread")
     (let ((new-id (gdb-get-field thread 'id)))
       (setq gdb-thread-number new-id)
-      (gud-basic-call (concat "-thread-select " new-id))))
+      (gdb-input (list (concat "-thread-select " new-id) 'ignore))
+      (gdb-update)))
   "Select the thread at current line of threads buffer.")
 
 (def-gdb-thread-buffer-simple-command
