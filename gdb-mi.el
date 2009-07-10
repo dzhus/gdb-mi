@@ -2771,13 +2771,12 @@ member."
 (defun gdb-stack-list-frames-custom ()
   (let* ((res (json-partial-output "frame"))
          (stack (gdb-get-field res 'stack)))
-         (dolist (frame (nreverse stack))
+         (dolist (frame stack)
            (insert (apply 'format `("%s in %s" ,@(gdb-get-many-fields frame 'level 'func))))
            (gdb-insert-frame-location frame)
            (newline))
          (save-excursion
            (goto-char (point-min))
-           (forward-line 1)
            (while (< (point) (point-max))
              (add-text-properties (point-at-bol) (1+ (point-at-bol))
                                   '(mouse-face highlight
