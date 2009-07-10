@@ -1,102 +1,51 @@
 -*-org-*-
 
-#+TAGS: threads(t) ui(u)
-
-## f for bugs, r for parts which need refactoring, n for new features
-
-* Being DRY
-
-* Broken glass
-   
-* Object approach
-** Rewrite existing buffers
-* New buffers
-** DONE [3/3] Threads
-   CLOSED: [2009-07-03 Птн 21:20]
-   - [X] basic information
-   - [X] keymap
-   - [X] current thread selection
-** IN PROGRESS Disassembly
-   - [X] basic information
-         
-         `-data-disassemble` command needs filename and line
-         information, which can be learned from GDB with
-         `-stack-info-frame` command. The code currently relies on
-         *global* variables `gdb-selected-file` and
-         `gdb-selected-line`, both set in `gdb-frame-handler`.
-         See also [[Stack information handling]].
-
-   - [X] alignment
-
-   - [X] breakpoints
-
-   - [X] overlay arrow
-
-   - [ ] disassemble function around point, not just the current one
-
-         To achieve this, I'll need to extend
-         `gdb-disassembly-handler` with optional argument for target
-         buffer to put disassembly data in
-         
-   - [ ] keymap
-
-   - [ ] when the program is not running, disassembly should display
-     `main`, not the first function from `gdb-main-file`
-         
-   - [ ] hyperlinks for jump instructions
-
-         Add clickable buttons for `jmp`, `jl` arguments
-   
-** IN PROGRESS Program memory
-   - [X] basic information
-   - [X] keymap
-   - [X] header
-   - [X] alignment
-         
-   - [ ] show function name instead of just address
-         
-         MI does not provide function name in `-data-read-memory`
-         output =\ `[[-symbol-info-symbol]]` should allow this, but it's
-         not implemented yet.
-
-* GDB+Emacs interface improvements
+#+TAGS: threads(t) ui(u) new(n) parsing(p) GDB(g) cleanup(c)
   
-* Overall UI improvements
-** TODO Improve `gdb-jump-to`
-   See also `gud-display-line` for implementation ideas
-** TODO Headers
-** TODO 
+* TODO [#A] Non-stop support
 
-* Multiple threads support
-** IN PROGRESS Buffer model review
-   Several new concepts for GDB buffers must be introduced:
+* TODO [#A] Improve multi-thread UI
+  Thread-bound buffers produce just a big mess. When observing several
+  threads, information should be presented in a more usable way.
+  
+  Ideas:
+  
+  - tree view for thread stacks in thread list buffer
+
+  - tab-like buttons for different threads in buffers showing
+    locals&registers
+
+* TODO [#B] Support --frame                                             :new:
+  It should be possible to see locals for different frames, not only
+  the top one. Does it make sense to update such buffers as we step
+  through the target?
+* Disassembly buffer
+** TODO Hyperlinks for jump instructions in disassembly buffer       :ui:new:
+   Add clickable buttons for jmp, jl arguments
+    
+** TODO Disassemble function around point                               :new:
+
+** TODO Show main when program is not running
+
+* Memory buffer
+** TODO Show function name instead of just address                   :ui:GDB:
    
-   - [X] buffer-local variable with a number of thread this buffer shows
-     information for
+   MI does not provide function name in -data-read-memory
+   output =\ [[-symbol-info-symbol]] should allow this, but it's
+   not implemented yet.
 
-   - [ ] same for frame number
-
-   - [X] extend `gdb-get-buffer-create` etc. to allow working with
-     buffers of the same type (like frames list) for several threads
-     simultaneously
-
-   - [ ] make sure thread selection interface is clear and intuitive
-
-   - [X] include thread information in buffer names to avoid confusion
+* TODO [0/5] [#C] Rewrite handlers for -var commands                :parsing:
+  - [ ] gdb-var-create-handler
+  - [ ] gdb-var-evaluate-expression-handler
+  - [ ] gdb-edit-value-handler
+  - [ ] gdb-var-list-children-handler
+  - [ ] gdb-var-update-handler
    
-** DONE Frames list buffers
-** DONE Locals buffers
-   CLOSED: [2009-07-07 Втр 00:11]
-   - [X] include frame in mode name
-** DONE Disassembly buffers
-   CLOSED: [2009-07-06 Пнд 23:48]
-   - [X] include frame in mode name 
-   - [X] fix breakpoints showing lag
-* IN PROGRESS [#A] Stack information handling                      :redesign:
-  `gdb-frame-handler` is not robust. Must think of how should gdb-mi
+* TODO [#C] Stack information handling
+  gdb-frame-handler is not robust. Must think of how should gdb-mi
   act when we stop in a routine w/o line info. Currently we simply
-  don't reset `gud-last-frame` in this case. Disassembly buffer falls
-  back to displaying `main` as `gdb-selected-file` gets nil.
+  don't reset gud-last-frame in this case. Disassembly buffer falls
+  back to displaying main as gdb-selected-file gets nil.
 
   When line information for top frame is unavailable, it's reasonable
   to make gdb-mi obey the highest of frames which have line:
@@ -109,20 +58,20 @@
 
   The same applies to disassembly buffer.
 
-* Black corners
-  Unclear parts of code which I don't fully understand yet.
-** gud-last-frame
-** gdb-pending-triggers
-** Why call ignored `list` command in `gdb-place-breakpoints`?
+* TODO Improve gdb-jump-to                                               :ui:
+  See also gud-display-line for implementation ideas
 
-* Cleaning the code
-  Some functions and concepts need review and possibly rewrite.
+* TODO Rewrite gdb-place-breakpoints                                :cleanup:
+  
+* GDB                                                                   :GDB:
+** TODO Send -symbol-info-symbol patch
+   Patch: [[file:~/projects/gdb-trunk/symbol-info-symbol.diff]]
 
-** TODO gdb-place-breakpoints
-* GDB
-** TODO Send `-symbol-info-symbol` patch
-   [[file:~/projects/gdb-trunk/symbol-info-symbol.diff]]
-** TODO Write `-stack-list-locals-and-args`
-** TODO Add current frame data to `-stack
-** TODO Report that `-break-info` has broken `script` field
+   Needed to [[show function name]] in memory buffer and [[show main]] in
+   disassembly.
+** TODO Write -stack-list-locals-and-args
+   
+** TODO Add current frame data to -stack
+** TODO Report that -break-info has broken script field
    http://emacsbugs.donarmstrong.com/cgi-bin/bugreport.cgi?bug=3794
+   
