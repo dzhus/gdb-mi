@@ -2039,7 +2039,7 @@ FILE is a full path."
       (insert "(")
       (let ((args (gdb-get-field thread 'frame 'args)))
         (dolist (arg args)
-          (insert (apply 'format `("%s=%s" ,@(gdb-get-many-fields arg 'name 'value)))))
+          (insert (apply 'format `("%s=%s," ,@(gdb-get-many-fields arg 'name 'value)))))
         (when args (kill-backward-chars 1)))
       (insert ")")
       (gdb-insert-frame-location (gdb-get-field thread 'frame))
