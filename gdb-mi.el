@@ -1637,17 +1637,28 @@ trigger argument when describing buffer types with
 
 ;; Used by disassembly buffer only, the rest use
 ;; def-gdb-trigger-and-handler
-(defmacro def-gdb-auto-update-handler (handler-name trigger-name custom-defun)
+(defmacro def-gdb-auto-update-handler (handler-name trigger-name custom-defun &optional nopreserve)
   "Define a handler HANDLER-NAME for TRIGGER-NAME with CUSTOM-DEFUN.
 
+Handlers are normally called from the buffers they put output in.
+
 Delete ((current-buffer) . TRIGGER) from `gdb-pending-triggers',
-erase current buffer and evaluate CUSTOM-DEFUN."
+erase current buffer and evaluate CUSTOM-DEFUN. Then
+`gdb-update-buffer-name' is called.
+
+If NOPRESERVE is non-nil, window point is not restored after CUSTOM-DEFUN."
   `(defun ,handler-name ()
      (gdb-delete-pending (cons (current-buffer) ',trigger-name))
-     (let* ((buffer-read-only nil))
+     (let* ((buffer-read-only nil)
+            (window (get-buffer-window (current-buffer) 0))
+            (start (window-start window))
+            (p (window-point window)))
        (erase-buffer)
        (,custom-defun)
-       (gdb-update-buffer-name))))
+       (gdb-update-buffer-name)
+       ,(when (not nopreserve)
+          '(set-window-start window start)
+          '(set-window-point window p)))))
 
 (defmacro def-gdb-trigger-and-handler (trigger-name gdb-command
 				       handler-name custom-defun)
@@ -2568,7 +2579,8 @@ corresponding to the mode line clicked."
 (def-gdb-auto-update-handler
   gdb-disassembly-handler
   gdb-invalidate-disassembly
-  gdb-disassembly-handler-custom)
+  gdb-disassembly-handler-custom
+  t)
 
 (gdb-set-buffer-rules
  'gdb-disassembly-buffer
