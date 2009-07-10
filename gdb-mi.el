@@ -1972,7 +1972,7 @@ FILE is a full path."
 
 (defvar gdb-threads-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map " " 'gdb-select-thread)
+    (define-key map "\r" 'gdb-select-thread)
     (define-key map "s" 'gdb-display-stack-for-thread)
     (define-key map "S" 'gdb-frame-stack-for-thread)
     (define-key map "l" 'gdb-display-locals-for-thread)
