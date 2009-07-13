@@ -1676,13 +1676,12 @@ trigger argument when describing buffer types with
      (when
          (or (not ,signal-list)
              (memq signal ,signal-list))
-     (if (not (gdb-pending-p
-               (cons (current-buffer) ',trigger-name)))
-         (progn
-           (gdb-input
-            (list ,gdb-command
-                  (gdb-bind-function-to-buffer ',handler-name (current-buffer))))
-           (gdb-add-pending (cons (current-buffer) ',trigger-name)))))))
+       (when (not (gdb-pending-p
+                   (cons (current-buffer) ',trigger-name)))
+         (gdb-input
+          (list ,gdb-command
+                (gdb-bind-function-to-buffer ',handler-name (current-buffer))))
+         (gdb-add-pending (cons (current-buffer) ',trigger-name))))))
 
 ;; Used by disassembly buffer only, the rest use
 ;; def-gdb-trigger-and-handler
