@@ -2032,6 +2032,9 @@ FILE is a full path."
     (define-key map "R" 'gdb-frame-registers-for-thread)
     (define-key map "d" 'gdb-display-disassembly-for-thread)
     (define-key map "D" 'gdb-frame-disassembly-for-thread)
+    (define-key map "i" 'gdb-interrupt-thread)
+    (define-key map "c" 'gdb-continue-thread)
+    (define-key map "s" 'gdb-step-thread)
     map))
 
 (define-derived-mode gdb-threads-mode gdb-parent-mode "Threads"
@@ -2087,7 +2090,7 @@ FILE is a full path."
   "Define a NAME command which will act upon thread on the current line.
 
 CUSTOM-DEFUN may use locally bound `thread' variable, which will
-be the value of 'gdb-thread propery of the current line. If
+be the value of 'gdb-thread property of the current line. If
 'gdb-thread is nil, error is signaled."
   `(defun ,name ()
      ,(when doc doc)
@@ -2158,6 +2161,34 @@ current line.")
   gdb-frame-disassembly-buffer
   "Display a new frame with disassembly buffer for the thread at
 current line.")
+
+(defmacro def-gdb-thread-buffer-gdb-command (name gdb-command &optional doc)
+  "Define a NAME which will execute send GDB-COMMAND with
+`gdb-thread-number' locally bound to id of thread on the current
+line."
+  `(def-gdb-thread-buffer-command ,name
+     (if gdb-non-stop
+         (let ((gdb-thread-number (gdb-get-field thread 'id)))
+           (gdb-input (list (gdb-current-context-command ,gdb-command)
+                            'ignore)))
+       (error "Available in non-stop mode only, customize gdb-non-stop."))
+       ,doc))
+
+;; Does this make sense in all-stop mode?
+(def-gdb-thread-buffer-gdb-command
+  gdb-interrupt-thread
+  "-exec-interrupt"
+  "Interrupt thread at current line.")
+
+(def-gdb-thread-buffer-gdb-command
+  gdb-continue-thread
+  "-exec-continue"
+  "Continue thread at current line.")
+
+(def-gdb-thread-buffer-gdb-command
+  gdb-step-thread
+  "-exec-step"
+  "Step thread at current line.")
 
 (defmacro gdb-propertize-header (name buffer help-echo mouse-face face)
   `(propertize ,name
