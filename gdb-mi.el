@@ -1508,9 +1508,11 @@ valid signal handlers.")
     (if (string-equal reason "exited-normally")
 	(setq gdb-active-process nil)))
 
+  (when gdb-first-done-or-error
+    (setq gdb-filter-output (concat gdb-filter-output gdb-prompt-name)))
+
   (when (or gdb-first-done-or-error
             gdb-non-stop)
-    (setq gdb-filter-output (concat gdb-filter-output gdb-prompt-name))
     (gdb-update)
     (setq gdb-first-done-or-error nil)))
 
