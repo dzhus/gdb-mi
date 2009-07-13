@@ -1501,7 +1501,7 @@ valid signal handlers.")
 ;;; 			    (string-to-number
 ;;; 			     (match-string 6 gud-marker-acc)))))
 
-    (setq gdb-inferior-status (if reason reason "unknown"))
+    (setq gdb-inferior-status (or reason "unknown"))
     (gdb-force-mode-line-update
      (propertize gdb-inferior-status 'face font-lock-warning-face))
     (if (string-equal reason "exited-normally")
