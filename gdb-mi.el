@@ -140,14 +140,14 @@ This variable may be updated implicitly by GDB via
   "Associative list of threads provided by \"-thread-info\" MI command.
 
 Keys are thread numbers (in strings) and values are structures as
-returned from -thread-info by `json-partial-output'. Updated in
+returned from -thread-info by `gdb-json-partial-output'. Updated in
 `gdb-thread-list-handler-custom'.")
 
 (defvar gdb-breakpoints-list nil
   "Associative list of breakpoints provided by \"-break-list\" MI command.
 
 Keys are breakpoint numbers (in string) and values are structures
-as returned from \"-break-list\" by `json-partial-output'
+as returned from \"-break-list\" by `gdb-json-partial-output'
 \(\"body\" field is used). Updated in
 `gdb-breakpoints-list-handler-custom'.")
 
@@ -1590,7 +1590,7 @@ valid signal handlers.")
   (with-current-buffer (gdb-get-buffer-create 'gdb-partial-output-buffer)
     (erase-buffer)))
 
-(defun json-partial-output (&optional fix-key fix-list)
+(defun gdb-json-partial-output (&optional fix-key fix-list)
   "Parse gdb-partial-output-buffer with `json-read'.
 
 If FIX-KEY is non-nil, strip all \"FIX-KEY=\" occurences from
@@ -1740,7 +1740,7 @@ HANDLER-NAME handler uses customization of CUSTOM-DEFUN. See
 
 (defun gdb-breakpoints-list-handler-custom ()
   (let ((breakpoints-list (gdb-get-field 
-                           (json-partial-output "bkpt" "script")
+                           (gdb-json-partial-output "bkpt" "script")
                            'BreakpointTable 'body)))
     (setq gdb-breakpoints-list nil)
     (insert "Num\tType\t\tDisp\tEnb\tHits\tAddr       What\n")
@@ -2050,7 +2050,7 @@ FILE is a full path."
   'gdb-invalidate-threads)
 
 (defun gdb-thread-list-handler-custom ()
-  (let* ((res (json-partial-output))
+  (let* ((res (gdb-json-partial-output))
          (threads-list (gdb-get-field res 'threads))
          (current-thread (gdb-get-field res 'current-thread-id)))
     (setq gdb-threads-list nil)
@@ -2309,7 +2309,7 @@ in `gdb-memory-format'."
       (error "Unknown format"))))
 
 (defun gdb-read-memory-custom ()
-  (let* ((res (json-partial-output))
+  (let* ((res (gdb-json-partial-output))
          (err-msg (gdb-get-field res 'msg)))
     (if (not err-msg)
         (let ((memory (gdb-get-field res 'memory)))
@@ -2710,7 +2710,7 @@ corresponding to the mode line clicked."
 (defun gdb-disassembly-handler-custom ()
   (let* ((pos 1)
          (address (gdb-get-field (gdb-current-buffer-frame) 'addr))
-         (res (json-partial-output))
+         (res (gdb-json-partial-output))
          (instructions (gdb-get-field res 'asm_insns))
          (last-instr (car (last instructions)))
          (column-padding (+ 2 (string-width
@@ -2854,7 +2854,7 @@ member."
           (from (insert (format " of %s" from))))))
 
 (defun gdb-stack-list-frames-custom ()
-  (let* ((res (json-partial-output "frame"))
+  (let* ((res (gdb-json-partial-output "frame"))
          (stack (gdb-get-field res 'stack)))
          (dolist (frame stack)
            (insert (apply 'format `("%s in %s" ,@(gdb-get-many-fields frame 'level 'func))))
@@ -2975,7 +2975,7 @@ member."
 ;; Dont display values of arrays or structures.
 ;; These can be expanded using gud-watch.
 (defun gdb-locals-handler-custom ()
-  (let ((locals-list (gdb-get-field (json-partial-output) 'locals)))
+  (let ((locals-list (gdb-get-field (gdb-json-partial-output) 'locals)))
     (dolist (local locals-list)
       (let ((name (gdb-get-field local 'name))
             (value (gdb-get-field local 'value))
@@ -3052,7 +3052,7 @@ member."
  'gdb-invalidate-registers)
 
 (defun gdb-registers-handler-custom ()
-  (let ((register-values (gdb-get-field (json-partial-output) 'register-values))
+  (let ((register-values (gdb-get-field (gdb-json-partial-output) 'register-values))
         (register-names-list (reverse gdb-register-names)))
     (dolist (register register-values)
       (let* ((register-number (gdb-get-field register 'number))
@@ -3110,14 +3110,14 @@ member."
 (defun gdb-changed-registers-handler ()
   (gdb-delete-pending 'gdb-get-changed-registers)
   (setq gdb-changed-registers nil)
-  (dolist (register-number (gdb-get-field (json-partial-output) 'changed-registers))
+  (dolist (register-number (gdb-get-field (gdb-json-partial-output) 'changed-registers))
     (push register-number gdb-changed-registers)))
 
 (defun gdb-register-names-handler ()
   ;; Don't use gdb-pending-triggers because this handler is called
   ;; only once (in gdb-init-1)
   (setq gdb-register-names nil)
-  (dolist (register-name (gdb-get-field (json-partial-output) 'register-names))
+  (dolist (register-name (gdb-get-field (gdb-json-partial-output) 'register-names))
     (push register-name gdb-register-names))
   (setq gdb-register-names (reverse gdb-register-names)))
 
@@ -3149,7 +3149,7 @@ thread. Called from `gdb-update'."
   "Sets `gdb-pc-address', `gdb-selected-frame' and
   `gdb-selected-file' to show overlay arrow in source buffer."
   (gdb-delete-pending 'gdb-get-main-selected-frame)
-  (let ((frame (gdb-get-field (json-partial-output) 'frame)))
+  (let ((frame (gdb-get-field (gdb-json-partial-output) 'frame)))
     (when frame
       (setq gdb-frame-number (gdb-get-field frame 'level))
       (setq gdb-selected-frame (gdb-get-field frame 'func))
