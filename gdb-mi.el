@@ -513,13 +513,13 @@ detailed description of this mode.
 	gdb-debug-log nil
 	gdb-source-window nil
 	gdb-inferior-status nil
-	gdb-continuation nil)
+	gdb-continuation nil
+        gdb-buf-publisher '())
   ;;
   (setq gdb-buffer-type 'gdbmi)
   ;;
   (gdb-force-mode-line-update
    (propertize "initializing..." 'face font-lock-variable-name-face))
-  (setq gdb-buf-publisher '())
   (when gdb-use-separate-io-buffer
     (gdb-get-buffer-create 'gdb-inferior-io)
     (gdb-clear-inferior-io)
