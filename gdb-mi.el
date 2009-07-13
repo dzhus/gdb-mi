@@ -225,6 +225,13 @@ Elements are either function names or pairs (buffer . function)")
 		 (const   :tag "Unlimited" nil))
   :version "22.1")
 
+(defcustom gdb-non-stop t
+  "When in non-stop mode, stopped threads can be examined while
+  other threads continue to execute."
+  :type 'boolean
+  :group 'gdb
+  :version "23.2")
+
 (defvar gdb-debug-log nil
   "List of commands sent to and replies received from GDB.
 Most recent commands are listed first.  This list stores only the last
@@ -525,6 +532,11 @@ detailed description of this mode.
   (if (eq window-system 'w32)
       (gdb-input (list "-gdb-set new-console off" 'ignore)))
   (gdb-input (list "-gdb-set height 0" 'ignore))
+
+  (when gdb-non-stop
+    (gdb-input (list "-gdb-set non-stop 1" 'ignore))
+    (gdb-input (list "-gdb-set target-async 1" 'ignore)))
+
   ;; find source file and compilation directory here
   (gdb-input
    ; Needs GDB 6.2 onwards.
@@ -1445,15 +1457,21 @@ valid signal handlers.")
     gdb-filter-output))
 
 (defun gdb-gdb (output-field))
-(defun gdb-thread-created (output-field))
-(defun gdb-thread-exited (output-field))
+
+;; gdb-invalidate-threads is defined to accept 'update-threads signal
+(defun gdb-thread-created (output-field)
+  (gdb-emit-signal gdb-buf-publisher 'update-threads))
+(defun gdb-thread-exited (output-field)
+  (gdb-emit-signal gdb-buf-publisher 'update-threads))
 
 (defun gdb-running (output-field)
   (setq gdb-inferior-status "running")
   (gdb-force-mode-line-update
    (propertize gdb-inferior-status 'face font-lock-type-face))
   (setq gdb-active-process t)
-  (setq gud-running t))
+  (setq gud-running t)
+  (when gdb-non-stop
+    (gdb-emit-signal gdb-buf-publisher 'update-threads)))
 
 (defun gdb-starting (output-field)
   ;; CLI commands don't emit ^running at the moment so use gdb-running too.
@@ -1490,7 +1508,8 @@ valid signal handlers.")
     (if (string-equal reason "exited-normally")
 	(setq gdb-active-process nil)))
 
-  (when gdb-first-done-or-error
+  (when (or gdb-first-done-or-error
+            gdb-non-stop)
     (setq gdb-filter-output (concat gdb-filter-output gdb-prompt-name))
     (gdb-update)
     (setq gdb-first-done-or-error nil)))
@@ -1633,29 +1652,36 @@ are not guaranteed."
       (setq values (append values (list (gdb-get-field struct field)))))))
 
 (defmacro def-gdb-auto-update-trigger (trigger-name gdb-command
-                                                    handler-name)
+                                                    handler-name
+                                                    &optional signal-list)
   "Define a trigger TRIGGER-NAME which sends GDB-COMMAND and sets
 HANDLER-NAME as its handler. HANDLER-NAME is bound to current
 buffer with `gdb-bind-function-to-buffer'.
+
+If SIGNAL-LIST is non-nil, GDB-COMMAND is sent only when the
+defined trigger is called with an argument from SIGNAL-LIST.
 
 Normally the trigger defined by this command must be called from
 the buffer where HANDLER-NAME must work. This should be done so
 that buffer-local thread number may be used in GDB-COMMAND (by
 calling `gdb-current-context-command').
-`gdb-bind-function-to-buffer' is used to achieve this, see how
-it's done in `gdb-get-buffer-create'.
+`gdb-bind-function-to-buffer' is used to achieve this, see
+`gdb-get-buffer-create'.
 
 Triggers defined by this command are meant to be used as a
 trigger argument when describing buffer types with
 `gdb-set-buffer-rules'."
   `(defun ,trigger-name (&optional signal)
+     (when
+         (or (not ,signal-list)
+             (memq signal ,signal-list))
      (if (not (gdb-pending-p
                (cons (current-buffer) ',trigger-name)))
          (progn
            (gdb-input
             (list ,gdb-command
                   (gdb-bind-function-to-buffer ',handler-name (current-buffer))))
-           (gdb-add-pending (cons (current-buffer) ',trigger-name))))))
+           (gdb-add-pending (cons (current-buffer) ',trigger-name)))))))
 
 ;; Used by disassembly buffer only, the rest use
 ;; def-gdb-trigger-and-handler
@@ -1664,9 +1690,9 @@ trigger argument when describing buffer types with
 
 Handlers are normally called from the buffers they put output in.
 
-Delete ((current-buffer) . TRIGGER) from `gdb-pending-triggers',
-erase current buffer and evaluate CUSTOM-DEFUN. Then
-`gdb-update-buffer-name' is called.
+Delete ((current-buffer) . TRIGGER-NAME) from
+`gdb-pending-triggers', erase current buffer and evaluate
+CUSTOM-DEFUN. Then `gdb-update-buffer-name' is called.
 
 If NOPRESERVE is non-nil, window point is not restored after CUSTOM-DEFUN."
   `(defun ,handler-name ()
@@ -1683,18 +1709,19 @@ If NOPRESERVE is non-nil, window point is not restored after CUSTOM-DEFUN."
           '(set-window-point window p)))))
 
 (defmacro def-gdb-trigger-and-handler (trigger-name gdb-command
-				       handler-name custom-defun)
+				       handler-name custom-defun
+                                       &optional signal-list)
   "Define trigger and handler.
 
 TRIGGER-NAME trigger is defined to send GDB-COMMAND. See
-`def-gdb-auto-update-trigger'.
+`def-gdb-auto-update-trigger'. SIGNAL-LIST determines when 
 
 HANDLER-NAME handler uses customization of CUSTOM-DEFUN. See
 `def-gdb-auto-update-handler'."
   `(progn
      (def-gdb-auto-update-trigger ,trigger-name
        ,gdb-command
-       ,handler-name)
+       ,handler-name ,signal-list)
      (def-gdb-auto-update-handler ,handler-name
        ,trigger-name ,custom-defun)))
 
@@ -1978,7 +2005,8 @@ FILE is a full path."
 
 (def-gdb-trigger-and-handler
   gdb-invalidate-threads "-thread-info"
-  gdb-thread-list-handler gdb-thread-list-handler-custom)
+  gdb-thread-list-handler gdb-thread-list-handler-custom
+  '(update update-threads))
 
 (gdb-set-buffer-rules
  'gdb-threads-buffer 
@@ -1989,6 +2017,7 @@ FILE is a full path."
 (defvar gdb-threads-font-lock-keywords
   '(("in \\([^ ]+\\) ("  (1 font-lock-function-name-face))
     (" \\(stopped\\) in "  (1 font-lock-warning-face))
+    (" \\(running\\)"  (1 font-lock-string-face))
     ("\\(\\(\\sw\\|[_.]\\)+\\)="  (1 font-lock-variable-name-face)))
   "Font lock keywords used in `gdb-threads-mode'.")
 
@@ -2029,27 +2058,29 @@ FILE is a full path."
       (setq gdb-thread-number current-thread))
     (set-marker gdb-thread-position nil)
     (dolist (thread threads-list)
+      (let ((running (string-equal (gdb-get-field thread 'state) "running")))
       (add-to-list 'gdb-threads-list
                    (cons (gdb-get-field thread 'id)
                          thread))
-      (insert (apply 'format `("%s (%s) %s in %s "
-                               ,@(gdb-get-many-fields thread 'id 'target-id 'state)
-                               ,(gdb-get-field thread 'frame 'func))))
-      ;; Arguments
-      (insert "(")
-      (let ((args (gdb-get-field thread 'frame 'args)))
-        (dolist (arg args)
-          (insert (apply 'format `("%s=%s," ,@(gdb-get-many-fields arg 'name 'value)))))
-        (when args (kill-backward-chars 1)))
-      (insert ")")
-      (gdb-insert-frame-location (gdb-get-field thread 'frame))
-      (insert (format " at %s" (gdb-get-field thread 'frame 'addr)))
+      (insert (apply 'format `("%s (%s) %s"
+                               ,@(gdb-get-many-fields thread 'id 'target-id 'state))))
+      ;; Include frame information for stopped threads
+      (when (not running)
+        (insert (concat " in " (gdb-get-field thread 'frame 'func)))
+        (insert " (")
+        (let ((args (gdb-get-field thread 'frame 'args)))
+          (dolist (arg args)
+            (insert (apply 'format `("%s=%s," ,@(gdb-get-many-fields arg 'name 'value)))))
+          (when args (kill-backward-chars 1)))
+        (insert ")")
+        (gdb-insert-frame-location (gdb-get-field thread 'frame))
+        (insert (format " at %s" (gdb-get-field thread 'frame 'addr))))
       (add-text-properties (line-beginning-position)
                            (line-end-position)
                            `(gdb-thread ,thread))
       (when (string-equal gdb-thread-number
                           (gdb-get-field thread 'id))
-        (set-marker gdb-thread-position (line-beginning-position)))
+        (set-marker gdb-thread-position (line-beginning-position))))
       (newline))))
 
 (defmacro def-gdb-thread-buffer-command (name custom-defun &optional doc)
