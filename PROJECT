@@ -2,7 +2,7 @@
 
 #+TAGS: threads(t) ui(u) new(n) parsing(p) GDB(g) cleanup(c)
   
-* IN PROGRESS [#A] Non-stop support
+* IN PROGRESS [#A] Non-stop support                                 :threads:
   Related reading:
   1. [[gnus:gmane.comp.gdb.devel#200803190016.02072.vladimir@codesourcery.com][MI non-stop mode spec]];
   2. [[gnus:gmane.comp.gdb.devel#200804261939.37635.vladimir@codesourcery.com][MI non-stop interface details]];
@@ -11,15 +11,21 @@
   3. [[gnus:gmane.comp.gdb.devel#200806032253.39575.pedro@codesourcery.com][non-stop and current thread exiting]];
   4. [[gnus:gmane.comp.gdb.devel#200805051232.31733.vladimir@codesourcery.com][Adjust MI non-stop/MI3 spec]] — big spec from Volodya.
   5. [[gnus:gmane.comp.gdb.devel#200806181601.52404.vladimir@codesourcery.com][Email from Vladimir Prus: MI threads behaviour]]
-     
-  Checklist:
-  - handle *stopped to select new main current thread;
-  - *running messages are asynchronously issued whenever new thread is
-    created (we need to show it in threads buffer immediately);
-  - use --exec-cont properly: when issued via thread list buffer,
-    continue only current thread; continue all threads otherwise.
+
+
+** DONE Update threads buffer in real-time
+   CLOSED: [2009-07-13 Пнд] 
+
+   *running messages are asynchronously issued whenever new thread is
+   created. We also use =thread-exited to update threads buffer.
+** IN PROGRESS Handle *stopped and =thread-selected to select new main current thread
+   Current thread selection should be handled in Emacs (in gdb-stopped
+   handler). 
+** TODO Handle -exec properly
+   When issued via thread list buffer, use only current thread; use
+   --all threads otherwise. Make this behaviour customizable.
     
-* TODO [#A] Improve multi-thread UI
+* TODO [#A] Improve multi-thread UI                                 :threads:
   Thread-bound buffers produce just a big mess. When observing several
   threads, information should be presented in a more usable way.
   
