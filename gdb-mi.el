@@ -2080,7 +2080,7 @@ FILE is a full path."
       (message (concat "GDB switched to another thread: " current-thread))
       (setq gdb-thread-number current-thread))
     (set-marker gdb-thread-position nil)
-    (dolist (thread threads-list)
+    (dolist (thread (reverse threads-list))
       (let ((running (string-equal (gdb-get-field thread 'state) "running")))
       (add-to-list 'gdb-threads-list
                    (cons (gdb-get-field thread 'id)
