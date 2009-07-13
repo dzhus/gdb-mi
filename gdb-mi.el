@@ -1590,8 +1590,11 @@ valid signal handlers.")
   (with-current-buffer (gdb-get-buffer-create 'gdb-partial-output-buffer)
     (erase-buffer)))
 
-(defun gdb-json-partial-output (&optional fix-key fix-list)
-  "Parse gdb-partial-output-buffer with `json-read'.
+(defun gdb-jsonify-buffer (&optional fix-key fix-list)
+  "Prepare GDB/MI output in current buffer for parsing with `json-read'.
+
+Field names are wrapped in double quotes and equal signs are
+replaced with semicolons.
 
 If FIX-KEY is non-nil, strip all \"FIX-KEY=\" occurences from
 partial output. This is used to get rid of useless keys in lists
@@ -1602,20 +1605,17 @@ responses.
 If FIX-LIST is non-nil, \"FIX-LIST={..}\" is replaced with
 \"FIX-LIST=[..]\" prior to parsing. This is used to fix broken
 -break-info output when it contains breakpoint script field
-incompatible with GDB/MI output syntax.
-
-Note that GDB/MI output syntax is different from JSON both
-cosmetically and (in some cases) structurally, so correct results
-are not guaranteed."
-  (with-current-buffer (gdb-get-buffer-create 'gdb-partial-output-buffer)
+incompatible with GDB/MI output syntax."
+  (save-excursion
     (goto-char (point-min))
     (when fix-key
       (save-excursion
         (while (re-search-forward (concat "[\\[,]\\(" fix-key "=\\)") nil t)
           (replace-match "" nil nil nil 1))))
+    ;; Emacs bug #3794
     (when fix-list
       (save-excursion
-        ;; Find positions of brackets which enclose broken list
+        ;; Find positions of braces which enclose broken list
         (while (re-search-forward (concat fix-list "={\"") nil t)
           (let ((p1 (goto-char (- (point) 2)))
                 (p2 (progn (forward-sexp)
@@ -1630,16 +1630,36 @@ are not guaranteed."
               (insert "]"))))))
     (goto-char (point-min))
     (insert "{")
-    ;; Wrap field names in double quotes and replace equal sign with
-    ;; semicolon.
     ;; TODO: This breaks badly with foo= inside constants
     (while (re-search-forward "\\([[:alpha:]-_]+\\)=" nil t)
       (replace-match "\"\\1\":" nil nil))
     (goto-char (point-max))
-    (insert "}")
+    (insert "}")))
+
+(defun gdb-json-read-buffer (&optional fix-key fix-list)
+  "Prepare and parse GDB/MI output in current buffer with `json-read'.
+
+FIX-KEY and FIX-LIST work as in `gdb-jsonify-buffer'."
+  (gdb-jsonify-buffer fix-key fix-list)
+  (save-excursion
     (goto-char (point-min))
     (let ((json-array-type 'list))
       (json-read))))
+
+(defun gdb-json-string (string &optional fix-key fix-list)
+  "Prepare and parse STRING containing GDB/MI output with `json-read'.
+
+FIX-KEY and FIX-LIST work as in `gdb-jsonify-buffer'."
+  (with-temp-buffer
+    (insert string)
+    (gdb-json-read-buffer fix-key fix-list)))
+
+(defun gdb-json-partial-output (&optional fix-key fix-list)
+  "Prepare and parse gdb-partial-output-buffer with `json-read'.
+
+FIX-KEY and FIX-KEY work as in `gdb-jsonify-buffer'."
+  (with-current-buffer (gdb-get-buffer-create 'gdb-partial-output-buffer)
+    (gdb-json-read-buffer fix-key fix-list)))
 
 (defun gdb-pad-string (string padding)
   (format (concat "%" (number-to-string padding) "s") string))
