@@ -1459,8 +1459,7 @@ valid signal handlers.")
 (defun gdb-gdb (output-field))
 
 ;; gdb-invalidate-threads is defined to accept 'update-threads signal
-(defun gdb-thread-created (output-field)
-  (gdb-emit-signal gdb-buf-publisher 'update-threads))
+(defun gdb-thread-created (output-field))
 (defun gdb-thread-exited (output-field)
   (gdb-emit-signal gdb-buf-publisher 'update-threads))
 
