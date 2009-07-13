@@ -1359,9 +1359,9 @@ valid signal handlers.")
   ;; gdb-break-list is maintained in breakpoints handler
   (gdb-get-buffer-create 'gdb-breakpoints-buffer)  
   
-  (gdb-get-main-selected-frame)
-
   (gdb-emit-signal gdb-buf-publisher 'update)
+
+  (gdb-get-main-selected-frame)
 
   (gdb-get-changed-registers)
 
@@ -2026,8 +2026,8 @@ FILE is a full path."
 (defvar gdb-threads-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map "\r" 'gdb-select-thread)
-    (define-key map "s" 'gdb-display-stack-for-thread)
-    (define-key map "S" 'gdb-frame-stack-for-thread)
+    (define-key map "f" 'gdb-display-stack-for-thread)
+    (define-key map "F" 'gdb-frame-stack-for-thread)
     (define-key map "l" 'gdb-display-locals-for-thread)
     (define-key map "L" 'gdb-frame-locals-for-thread)
     (define-key map "r" 'gdb-display-registers-for-thread)
