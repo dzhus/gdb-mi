@@ -90,6 +90,11 @@
   The same applies to disassembly buffer.
 
 * TODO [#D] Support overlay arrow in threads list for text terminals     :ui:
+
+* TODO Change gdb-display-buffer
+  Too many windows appear now. It should be possible to preempt
+  visible buffer of some specific type with the same buffer for
+  another thread. gdb-get-buffer-by-type should be written for this.
 * TODO Improve gdb-jump-to                                               :ui:
   See also gud-display-line for implementation ideas
 
