@@ -530,21 +530,21 @@ detailed description of this mode.
 		   (process-tty-name (get-process "gdb-inferior")))
 	   'ignore)))
   (if (eq window-system 'w32)
-      (gdb-input (list "-gdb-set new-console off" 'ignore)))
-  (gdb-input (list "-gdb-set height 0" 'ignore))
+      (gdb-input (list "-gdb-set new-console off" 'ignore) t))
+  (gdb-input (list "-gdb-set height 0" 'ignore) t)
 
   (when gdb-non-stop
-    (gdb-input (list "-gdb-set non-stop 1" 'ignore))
-    (gdb-input (list "-gdb-set target-async 1" 'ignore)))
+    (gdb-input (list "-gdb-set non-stop 1" 'ignore) t)
+    (gdb-input (list "-gdb-set target-async 1" 'ignore) t))
 
   ;; find source file and compilation directory here
   (gdb-input
    ; Needs GDB 6.2 onwards.
-   (list "-file-list-exec-source-files" 'gdb-get-source-file-list))
+   (list "-file-list-exec-source-files" 'gdb-get-source-file-list) t)
   (if gdb-create-source-file-list
       (gdb-input
         ; Needs GDB 6.0 onwards.
-       (list "-file-list-exec-source-file" 'gdb-get-source-file)))
+       (list "-file-list-exec-source-file" 'gdb-get-source-file) t))
   (gdb-input
    (list "-gdb-show prompt" 'gdb-get-prompt)))
 
@@ -1285,13 +1285,32 @@ static char *magick[] = {
 					gdb-continuation string "\"\n"))
       (setq gdb-continuation nil))))
 
-(defun gdb-input (item)
+(defun gdb-input (item &optional nocontext)
+  "Send first element of list ITEM to GDB and use second element as a handler.
+
+Unless NOCONTEXT is non-nil, string \"--thread N\", where N is
+current `gdb-thread-number', value is added to ITEM prior to
+sending. If ITEM is a pair, \"--thread N\" is attached to car,
+then cdr is appended."
+  ;; We use pair for commands which need extra arguments because
+  ;; --thread option needs to immediately follow the command name
+  (let ((item 
+         (or (and nocontext item)
+             (let* ((command (car item)))
+               (list
+                (cond ((stringp command)
+                       (gdb-current-context-command command))
+                      ((consp command)
+                       (concat
+                        (gdb-current-context-command (car command))
+                        (cdr command))))
+                (nth 1 item))))))
   (if gdb-enable-debug (push (cons 'send-item item) gdb-debug-log))
   (setq gdb-token-number (1+ gdb-token-number))
   (setcar item (concat (number-to-string gdb-token-number) (car item)))
   (push (cons gdb-token-number (car (cdr item))) gdb-handler-alist)
   (process-send-string (get-buffer-process gud-comint-buffer)
-		       (concat (car item) "\n")))
+                       (concat (car item) "\n"))))
 
 (defun gdb-current-context-command (command)
   "Add --thread option to gdb COMMAND.
@@ -1674,18 +1693,21 @@ FIX-KEY and FIX-KEY work as in `gdb-jsonify-buffer'."
 
 (defmacro def-gdb-auto-update-trigger (trigger-name gdb-command
                                                     handler-name
-                                                    &optional signal-list)
+                                                    &optional nocontext signal-list)
   "Define a trigger TRIGGER-NAME which sends GDB-COMMAND and sets
 HANDLER-NAME as its handler. HANDLER-NAME is bound to current
 buffer with `gdb-bind-function-to-buffer'.
+
+NOCONTEXT works for GDB-COMMAND as in `gdb-input'.
 
 If SIGNAL-LIST is non-nil, GDB-COMMAND is sent only when the
 defined trigger is called with an argument from SIGNAL-LIST.
 
 Normally the trigger defined by this command must be called from
 the buffer where HANDLER-NAME must work. This should be done so
-that buffer-local thread number may be used in GDB-COMMAND (by
-calling `gdb-current-context-command').
+that buffer-local thread number is added propery to GDB-COMMAND
+in `gdb-input'.
+
 `gdb-bind-function-to-buffer' is used to achieve this, see
 `gdb-get-buffer-create'.
 
@@ -1700,7 +1722,8 @@ trigger argument when describing buffer types with
                    (cons (current-buffer) ',trigger-name)))
          (gdb-input
           (list ,gdb-command
-                (gdb-bind-function-to-buffer ',handler-name (current-buffer))))
+                (gdb-bind-function-to-buffer ',handler-name (current-buffer)))
+          ,nocontext)
          (gdb-add-pending (cons (current-buffer) ',trigger-name))))))
 
 ;; Used by disassembly buffer only, the rest use
@@ -1730,18 +1753,20 @@ If NOPRESERVE is non-nil, window point is not restored after CUSTOM-DEFUN."
 
 (defmacro def-gdb-trigger-and-handler (trigger-name gdb-command
 				       handler-name custom-defun
-                                       &optional signal-list)
+                                       &optional nocontext signal-list)
   "Define trigger and handler.
 
 TRIGGER-NAME trigger is defined to send GDB-COMMAND. See
 `def-gdb-auto-update-trigger'. SIGNAL-LIST determines when 
+
+NOCONTEXT works for GDB-COMMAND as in `gdb-input'.
 
 HANDLER-NAME handler uses customization of CUSTOM-DEFUN. See
 `def-gdb-auto-update-handler'."
   `(progn
      (def-gdb-auto-update-trigger ,trigger-name
        ,gdb-command
-       ,handler-name ,signal-list)
+       ,handler-name ,nocontext ,signal-list)
      (def-gdb-auto-update-handler ,handler-name
        ,trigger-name ,custom-defun)))
 
@@ -1750,7 +1775,8 @@ HANDLER-NAME handler uses customization of CUSTOM-DEFUN. See
 ;; Breakpoint buffer : This displays the output of `-break-list'.
 (def-gdb-trigger-and-handler
   gdb-invalidate-breakpoints "-break-list"
-  gdb-breakpoints-list-handler gdb-breakpoints-list-handler-custom)
+  gdb-breakpoints-list-handler gdb-breakpoints-list-handler-custom
+  t)
 
 (gdb-set-buffer-rules 
  'gdb-breakpoints-buffer
@@ -1833,7 +1859,7 @@ HANDLER-NAME handler uses customization of CUSTOM-DEFUN. See
               (gdb-input
                (list "-file-list-exec-source-file"
                      `(lambda () (gdb-get-location
-                                  ,bptno ,line ,flag)))))))))))
+                                  ,bptno ,line ,flag))) t))))))))
 
 (defvar gdb-source-file-regexp "fullname=\"\\(.*?\\)\"")
 
@@ -2026,6 +2052,7 @@ FILE is a full path."
 (def-gdb-trigger-and-handler
   gdb-invalidate-threads "-thread-info"
   gdb-thread-list-handler gdb-thread-list-handler-custom
+  t
   '(update update-threads))
 
 (gdb-set-buffer-rules
@@ -2134,7 +2161,7 @@ on the current line."
       (error "Cannot select running thread")
     (let ((new-id (gdb-get-field thread 'id)))
       (setq gdb-thread-number new-id)
-      (gdb-input (list (concat "-thread-select " new-id) 'ignore))
+      (gdb-input (list (concat "-thread-select " new-id) 'ignore) t)
       (gdb-update)))
   "Select the thread at current line of threads buffer.")
 
@@ -2189,8 +2216,7 @@ line."
   `(def-gdb-thread-buffer-command ,name
      (if gdb-non-stop
          (let ((gdb-thread-number (gdb-get-field thread 'id)))
-           (gdb-input (list (gdb-current-context-command ,gdb-command)
-                            'ignore)))
+           (gdb-input (list ,gdb-command 'ignore)))
        (error "Available in non-stop mode only, customize gdb-non-stop."))
        ,doc))
 
@@ -2848,7 +2874,7 @@ breakpoints buffer."
 ;; Frames buffer.  This displays a perpetually correct bactrack trace.
 ;;
 (def-gdb-trigger-and-handler
-  gdb-invalidate-frames (gdb-current-context-command "-stack-list-frames")
+  gdb-invalidate-frames "-stack-list-frames"
   gdb-stack-list-frames-handler gdb-stack-list-frames-custom)
 
 (gdb-set-buffer-rules
@@ -2956,7 +2982,7 @@ member."
 ;; uses "-stack-list-locals --simple-values". Needs GDB 6.1 onwards.
 (def-gdb-trigger-and-handler
   gdb-invalidate-locals
-  (concat (gdb-current-context-command "-stack-list-locals") " --simple-values")
+  (cons "-stack-list-locals" " --simple-values")
   gdb-locals-handler gdb-locals-handler-custom)
 
 (gdb-set-buffer-rules
@@ -3061,7 +3087,7 @@ member."
 
 (def-gdb-trigger-and-handler
   gdb-invalidate-registers
-  (concat (gdb-current-context-command "-data-list-register-values") " x")
+  (cons "-data-list-register-values" " x")
   gdb-registers-handler
   gdb-registers-handler-custom)
 
@@ -3162,7 +3188,7 @@ thread. Called from `gdb-update'."
   (if (not (gdb-pending-p 'gdb-get-main-selected-frame))
       (progn
 	(gdb-input
-	 (list (gdb-current-context-command "-stack-info-frame") 'gdb-frame-handler))
+	 (list "-stack-info-frame" 'gdb-frame-handler))
 	(gdb-add-pending 'gdb-get-main-selected-frame))))
 
 (defun gdb-frame-handler ()
