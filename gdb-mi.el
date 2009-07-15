@@ -1267,7 +1267,7 @@ static char *magick[] = {
     (let ((inhibit-read-only t))
       (remove-text-properties (point-min) (point-max) '(face))))
   ;; mimic <RET> key to repeat previous command in GDB
-  (if (not (string-match "^\\s+$" string))
+  (if (not (string= "" string))
       (setq gdb-last-command string)
     (if gdb-last-command (setq string gdb-last-command)))
   (if gdb-enable-debug
