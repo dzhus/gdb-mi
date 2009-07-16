@@ -20,17 +20,7 @@
    created. We also use =thread-exited to update threads buffer.
 ** IN PROGRESS Handle *stopped and =thread-selected to select new main current thread
    Current thread selection should be handled in Emacs (in gdb-stopped
-   handler).
-** IN PROGRESS Think how to handle commands that [[do not ignore]] --thread
-   When we issue -break-info before the program started, it fails with
-   «Invalid thread number» error no matter what number we supply.
-   -gdb-set commands don't work as well when --thread is in their
-   tail. Currently this is achieved via NOCONTEXT optional argument in
-   gdb-input. Possibly we need to default gdb-thread-number to nil and
-   append it to string in gdb-current-context-command only when it is
-   non-nil (after program has run). That will help to fix -break-info
-   and -thread-info issues. But what if we need to send -gdb-set
-   during program execution?
+   handler). 
 ** TODO Handle -exec properly
    When issued via thread list buffer, use only current thread; use
    --all threads otherwise. Make this behaviour customizable.
@@ -107,10 +97,6 @@
 ** TODO Report that -break-info has broken script field
    http://emacsbugs.donarmstrong.com/cgi-bin/bugreport.cgi?bug=3794
    
-** TODO Report that some commands do not ignore --thread
-   - break-list
-   - thread-info
-   - file-list-exec-source-files and file-list-exec-source-file
-   - gdb-set (?)
+
 ** TODO Report wrong -exec-interrupt documentation
    -exec-interrupt accepts --thread
