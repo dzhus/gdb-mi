@@ -421,6 +421,28 @@ the list) is deleted every time a new one is added (at the front)."
     )
   "Font lock keywords used in `gdb-local-mode'.")
 
+;; noall is used for commands which don't take --all, but only
+;; --thread.
+(defun gdb-gud-context-command (command &optional noall)
+  "When `gdb-non-stop' is t, add --thread option to COMMAND if
+`gdb-gud-control-all-threads' is nil and --all option otherwise.
+If NOALL is t, always add --thread option no matter what
+`gdb-gud-control-all-threads' value is.
+
+When `gdb-non-stop' is nil, return COMMAND unchanged."
+  (if gdb-non-stop
+      (if (and gdb-gud-control-all-threads
+               (not noall))
+          (concat command " --all ")
+        (gdb-current-context-command command))
+    command))
+
+(defmacro gdb-gud-context-call (cmd1 &optional cmd2 noall)
+  `(gud-call
+    (concat
+     (gdb-gud-context-command ,cmd1 ,noall)
+     ,cmd2) arg))
+
 ;;;###autoload
 (defun gdb (command-line)
   "Run gdb on program FILE in buffer *gud-FILE*.
@@ -518,36 +540,6 @@ detailed description of this mode.
            nil
            "Run the program.")
 
-  (local-set-key "\C-i" 'gud-gdb-complete-command)
-  (setq gdb-first-prompt t)
-  (setq gud-running nil)
-  (gdb-update)
-  (run-hooks 'gdb-mode-hook))
-
-;; noall is used for commands which don't take --all, but only
-;; --thread.
-(defun gdb-gud-context-command (command &optional noall)
-  "When `gdb-non-stop' is t, add --thread option to COMMAND if
-`gdb-gud-control-all-threads' is nil and --all option otherwise.
-If NOALL is t, always add --thread option no matter what
-`gdb-gud-control-all-threads' value is.
-
-When `gdb-non-stop' is nil, return COMMAND unchanged."
-  (if gdb-non-stop
-      (if (and gdb-gud-control-all-threads
-               (not noall))
-          (concat command " --all ")
-        (gdb-current-context-command command))
-    command))
-
-(defmacro gdb-gud-context-call (cmd1 &optional cmd2 noall)
-  `(gud-call
-    (concat
-     (gdb-gud-context-command ,cmd1 ,noall)
-     ,cmd2) arg))
-            
-
-(defun gdb-init-1 ()
   (gud-def gud-break (if (not (string-match "Disassembly" mode-name))
 			 (gud-call "break %f:%l" arg)
 		       (save-excursion
@@ -555,7 +547,7 @@ When `gdb-non-stop' is nil, return COMMAND unchanged."
 			 (forward-char 2)
 			 (gud-call "break *%a" arg)))
 	   "\C-b" "Set breakpoint at current line or address.")
-  ;;
+
   (gud-def gud-remove (if (not (string-match "Disassembly" mode-name))
 			  (gud-call "clear %f:%l" arg)
 			(save-excursion
@@ -563,6 +555,7 @@ When `gdb-non-stop' is nil, return COMMAND unchanged."
 			  (forward-char 2)
 			  (gud-call "clear *%a" arg)))
 	   "\C-d" "Remove breakpoint at current line or address.")
+
   ;; -exec-until doesn't support --all yet
   (gud-def gud-until  (if (not (string-match "Disassembly" mode-name))
 			  (gud-call "-exec-until %f:%l" arg)
@@ -613,7 +606,14 @@ When `gdb-non-stop' is nil, return COMMAND unchanged."
     'gdb-mouse-jump)
   (define-key gud-minor-mode-map [left-margin C-mouse-3]
     'gdb-mouse-jump)
-  ;;
+
+  (local-set-key "\C-i" 'gud-gdb-complete-command)
+  (setq gdb-first-prompt t)
+  (setq gud-running nil)
+  (gdb-update)
+  (run-hooks 'gdb-mode-hook))
+            
+(defun gdb-init-1 ()
   ;; (re-)initialise
   (setq gdb-selected-frame nil
 	gdb-frame-number nil
