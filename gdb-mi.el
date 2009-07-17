@@ -246,9 +246,12 @@ other threads continue to execute."
   :group 'gdb
   :version "23.2")
 
-(defcustom gdb-control-all-threads t
-  "When enabled, execution commands affect all threads when in
-non-stop mode."
+;; TODO Some commands can't be called with --all (give a notice about
+;; it in setting doc)
+(defcustom gdb-gud-control-all-threads t
+  "When enabled, GUD execution commands affect all threads when
+in non-stop mode. Otherwise, only currently selected thread is
+affected."
   :type 'boolean
   :group 'gdb
   :version "23.2")
@@ -493,25 +496,56 @@ detailed description of this mode.
   (gud-def gud-pstar  "print* %e" nil
 	   "Evaluate C dereferenced pointer expression at point.")
 
-  (gud-def gud-step   "-exec-step %p"              "\C-s"
+  (gud-def gud-step   (gdb-gud-context-call "-exec-step" "%p" t)
+           "\C-s"
 	   "Step one source line with display.")
-  (gud-def gud-stepi  "-exec-step-instruction %p"  "\C-i"
+  (gud-def gud-stepi  (gdb-gud-context-call "-exec-step-instruction" "%p" t)
+           "\C-i"
 	   "Step one instruction with display.")
-  (gud-def gud-next   "-exec-next %p"              "\C-n"
+  (gud-def gud-next   (gdb-gud-context-call "-exec-next" "%p" t)
+           "\C-n"
 	   "Step one line (skip functions).")
-  (gud-def gud-nexti  "nexti %p" nil
+  (gud-def gud-nexti  (gdb-gud-context-call "nexti" "%p")
+           nil
 	   "Step one instruction (skip functions).")
-  (gud-def gud-cont   "-exec-continue"             "\C-r"
+  (gud-def gud-cont   (gdb-gud-context-call "-exec-continue")
+           "\C-r"
 	   "Continue with display.")
-  (gud-def gud-finish "-exec-finish"               "\C-f"
+  (gud-def gud-finish (gdb-gud-context-call "-exec-finish" nil t)
+           "\C-f"
 	   "Finish executing current function.")
-  (gud-def gud-run    "-exec-run"	     nil    "Runn the program.")
+  (gud-def gud-run    "-exec-run"
+           nil
+           "Run the program.")
 
   (local-set-key "\C-i" 'gud-gdb-complete-command)
   (setq gdb-first-prompt t)
   (setq gud-running nil)
   (gdb-update)
   (run-hooks 'gdb-mode-hook))
+
+;; noall is used for commands which don't take --all, but only
+;; --thread.
+(defun gdb-gud-context-command (command &optional noall)
+  "When `gdb-non-stop' is t, add --thread option to COMMAND if
+`gdb-gud-control-all-threads' is nil and --all option otherwise.
+If NOALL is t, always add --thread option no matter what
+`gdb-gud-control-all-threads' value is.
+
+When `gdb-non-stop' is nil, return COMMAND unchanged."
+  (if gdb-non-stop
+      (if (and gdb-gud-control-all-threads
+               (not noall))
+          (concat command " --all ")
+        (gdb-current-context-command command))
+    command))
+
+(defmacro gdb-gud-context-call (cmd1 &optional cmd2 noall)
+  `(gud-call
+    (concat
+     (gdb-gud-context-command ,cmd1 ,noall)
+     ,cmd2) arg))
+            
 
 (defun gdb-init-1 ()
   (gud-def gud-break (if (not (string-match "Disassembly" mode-name))
@@ -529,7 +563,7 @@ detailed description of this mode.
 			  (forward-char 2)
 			  (gud-call "clear *%a" arg)))
 	   "\C-d" "Remove breakpoint at current line or address.")
-  ;;
+  ;; -exec-until doesn't support --all yet
   (gud-def gud-until  (if (not (string-match "Disassembly" mode-name))
 			  (gud-call "-exec-until %f:%l" arg)
 			(save-excursion
@@ -537,9 +571,11 @@ detailed description of this mode.
 			  (forward-char 2)
 			  (gud-call "-exec-until *%a" arg)))
 	   "\C-u" "Continue to current line or address.")
-  ;;
+  ;; TODO Why arg here?
   (gud-def
-   gud-go (gud-call (if gdb-active-process "-exec-continue" "-exec-run") arg)
+   gud-go (gud-call (if gdb-active-process
+                        (gdb-gud-context-command "-exec-continue")
+                      "-exec-run") arg)
    nil "Start or continue execution.")
 
   ;; For debugging Emacs only.
@@ -1387,7 +1423,7 @@ static char *magick[] = {
 Option value is taken from `gdb-thread-number'. If
 `gdb-thread-number' is nil, COMMAND is returned unchanged."
   (if gdb-thread-number
-      (concat command " --thread " gdb-thread-number)
+      (concat command " --thread " gdb-thread-number " ")
     command))
 
 (defun gdb-current-context-buffer-name (name)

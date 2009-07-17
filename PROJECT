@@ -47,14 +47,16 @@
    mode), gud-running is changed whenever we change current selected
    thread in Emacs.
 
-   To show toolbar/menu items properly when `gdb-control-all-threads`
+   To show toolbar/menu items properly when `gdb-gud-control-all-threads`
    is t (we are in A mode), we need to check if all threads are
    running and use `gdb-running-threads-count` and
    `gdb-stopped-threads-count` updated via -thread-info handler. This
    way we'll be able to get «Continue All» button when at least some
    threads are stopped and «Stop All» button when some threads are
    running.
-   
+** IN PROGRESS gud-stop
+   gud-stop-subjob calls comint-stop-subjob. Certainly we'd like to
+   stop program execution with one big button.
 * TODO [#A] Improve multi-thread UI                                 :threads:
   Thread-bound buffers produce just a big mess. When observing several
   threads, information should be presented in a more usable way.
