@@ -21,6 +21,20 @@
 ** IN PROGRESS Handle *stopped and =thread-selected to select new main current thread
    Current thread selection should be handled in Emacs (in gdb-stopped
    handler). 
+  
+   We use gdb-switch-reasons, gdb-switch-when-stopped and `*stopped`
+   in non-stop mode (when we're non-stop, we're async as well, which
+   guarantees that `*stopped` records have `reason` field).
+
+   In all-stop mode, we use `=thread-selected` because it seems that
+   GDB's suggestions make sense in this case.
+
+   Perhaps we don't need to update *everything* if we hit *stopped but
+   no another thread has been selected.
+
+   We still send -thread-select to GDB when selecting thread via
+   `gdb-select-thread`.
+   
 ** TODO Handle -exec properly
    When issued via thread list buffer, use only current thread; use
    --all threads otherwise. Make this behaviour customizable.
@@ -36,10 +50,14 @@
   - tab-like buttons for different threads in buffers showing
     locals&registers
 
-* TODO [#B] Support --frame                                             :new:
+* TODO [#C] Support --frame                                             :new:
   It should be possible to see locals for different frames, not only
   the top one. Does it make sense to update such buffers as we step
   through the target?
+
+* TODO [#B] Cleanup unused buffers                               :threads:ui:
+  Kill buffers which are bound to threads which already exited. This
+  can be done by handling =thread-exited notification.
 * Disassembly buffer
 ** TODO Hyperlinks for jump instructions in disassembly buffer       :ui:new:
    Add clickable buttons for jmp, jl arguments

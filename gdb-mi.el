@@ -122,9 +122,8 @@ Invalidation triggers use this variable to query GDB for
 information on the specified thread by wrapping GDB/MI commands
 in `gdb-current-context-command'.
 
-This variable may be updated implicitly by GDB via
-`gdb-thread-list-handler-custom' or explicitly by
-`gdb-select-thread'.")
+This variable may be updated implicitly by GDB via `gdb-stopped'
+or explicitly by `gdb-select-thread'.")
 
 ;; Used to show overlay arrow in source buffer. All set in
 ;; gdb-get-main-selected-frame. Disassembly buffer should not use
@@ -227,7 +226,69 @@ Elements are either function names or pairs (buffer . function)")
 
 (defcustom gdb-non-stop t
   "When in non-stop mode, stopped threads can be examined while
-  other threads continue to execute."
+other threads continue to execute."
+  :type 'boolean
+  :group 'gdb
+  :version "23.2")
+
+(defcustom gdb-switch-reasons t
+  "List of stop reasons which cause Emacs to switch to the thread
+which caused the stop. When t, switch to stopped thread no matter
+what the reason was. When nil, never switch to stopped thread
+automatically.
+
+This setting is used in non-stop mode only. In all-stop mode,
+Emacs always switches to the thread which caused the stop."
+  ;; exited, exited-normally and exited-signalled are not
+  ;; thread-specific stop reasons and therefore are not included in
+  ;; this list
+  :type '(choice
+          (const :tag "All reasons" t)
+          (set :tag "Selection of reasons..."
+               (const :tag "A breakpoint was reached." "breakpoint-hit")
+               (const :tag "A watchpoint was triggered." "watchpoint-trigger")
+               (const :tag "A read watchpoint was triggered." "read-watchpoint-trigger")
+               (const :tag "An access watchpoint was triggered." "access-watchpoint-trigger")
+               (const :tag "Function finished execution." "function-finished")
+               (const :tag "Location reached." "location-reached")
+               (const :tag "Watchpoint has gone out of scope" "watchpoint-scope")
+               (const :tag "End of stepping range reached." "end-stepping-range")
+               (const :tag "Signal received (like interruption)." "signal-received"))
+          (const :tag "None" nil))
+  :group 'gdb
+  :version "23.2"
+  :link '(info-link "(gdb)GDB/MI Async Records"))
+
+(defcustom gdb-stopped-hooks nil
+  "This variable holds a list of functions to be called whenever
+GDB stops.
+
+Each function takes one argument, a parsed MI response, which
+contains fields of corresponding MI *stopped async record:
+
+    ((stopped-threads . \"all\")
+     (thread-id . \"1\")
+     (frame (line . \"38\")
+            (fullname . \"/home/sphinx/projects/gsoc/server.c\")
+            (file . \"server.c\")
+            (args ((value . \"0x804b038\")
+                   (name . \"arg\")))
+            (func . \"hello\")
+            (addr . \"0x0804869e\"))
+     (reason . \"end-stepping-range\"))
+
+`gdb-get-field' may be used to access the fields of response.
+
+Each function is called after the new current thread was selected
+and GDB buffers were updated in `gdb-stopped'."
+  :type '(repeat function)
+  :group 'gdb
+  :version "23.2"
+  :link '(info-link "(gdb)GDB/MI Async Records"))
+
+(defcustom gdb-switch-when-another-stopped t
+  "When nil, Emacs won't switch to stopped thread if some other
+stopped thread is already selected."
   :type 'boolean
   :group 'gdb
   :version "23.2")
@@ -514,7 +575,9 @@ detailed description of this mode.
 	gdb-source-window nil
 	gdb-inferior-status nil
 	gdb-continuation nil
-        gdb-buf-publisher '())
+        gdb-buf-publisher '()
+        gdb-threads-list '()
+        gdb-breakpoints-list '())
   ;;
   (setq gdb-buffer-type 'gdbmi)
   ;;
@@ -955,11 +1018,14 @@ INDENT is the current indentation depth."
   (assoc gdb-buffer-type gdb-buffer-rules))
 
 (defun gdb-current-buffer-thread ()
-  "Get thread of current buffer from `gdb-threads-list'."
+  "Get thread object of current buffer from `gdb-threads-list'.
+
+When current buffer is not bound to any thread, return main
+thread."
   (cdr (assoc gdb-thread-number gdb-threads-list)))
 
 (defun gdb-current-buffer-frame ()
-  "Get current stack frame for thread of current buffer."
+  "Get current stack frame object for thread of current buffer."
   (gdb-get-field (gdb-current-buffer-thread) 'frame))
 
 (defun gdb-get-buffer (key &optional thread)
@@ -1354,7 +1420,7 @@ valid signal handlers.")
      (propertize "initializing..." 'face font-lock-variable-name-face))
     (gdb-init-1)
     (setq gdb-first-prompt nil))
-  ;; We may need to update gdb-thread-number and gdb-threads-list
+  ;; We may need to update gdb-threads-list so we can use
   (gdb-get-buffer-create 'gdb-threads-buffer)
   ;; gdb-break-list is maintained in breakpoints handler
   (gdb-get-buffer-create 'gdb-breakpoints-buffer)  
@@ -1396,7 +1462,7 @@ valid signal handlers.")
     (gdb-error . "\\([0-9]*\\)\\^error,\\(.*?\\)\n")
     (gdb-console . "~\\(\".*?\"\\)\n")
     (gdb-internals . "&\\(\".*?\"\\)\n")
-    (gdb-stopped . "\\*stopped,?\\(.*?\n\\)")
+    (gdb-stopped . "\\*stopped,?\\(.*?\\)\n")
     (gdb-running . "\\*running,\\(.*?\n\\)")
     (gdb-thread-created . "=thread-created,\\(.*?\n\\)")
     (gdb-thread-exited . "=thread-exited,\\(.*?\n\\)")))
@@ -1483,14 +1549,15 @@ valid signal handlers.")
   (setq gud-running t))
 
 ;; -break-insert -t didn't give a reason before gdb 6.9
-(defconst gdb-stopped-regexp
- "\\(reason=\"\\(.*?\\)\"\\)?\\(\\(,exit-code=.*?\\)*\n\\|.*?,file=\".*?\".*?,fullname=\"\\(.*?\\)\".*?,line=\"\\(.*?\\)\".*?\n\\)")
 
 (defun gdb-stopped (output-field)
+  "Given the contents of *stopped MI async record, select new
+current thread and update GDB buffers."
   (setq gud-running nil)
-  (string-match gdb-stopped-regexp output-field)
-  (let ((reason (match-string 2 output-field))
-	(file (match-string 5 output-field)))
+  ;; Reason is available with target-async only
+  (let* ((result (gdb-json-string output-field))
+         (reason (gdb-get-field result 'reason))
+         (thread-id (gdb-get-field result 'thread-id)))
 
 ;;; Don't set gud-last-frame here as it's currently done in gdb-frame-handler
 ;;; because synchronous GDB doesn't give these fields with CLI.
@@ -1505,15 +1572,38 @@ valid signal handlers.")
     (gdb-force-mode-line-update
      (propertize gdb-inferior-status 'face font-lock-warning-face))
     (if (string-equal reason "exited-normally")
-	(setq gdb-active-process nil)))
+	(setq gdb-active-process nil))
 
+    ;; Select new current thread.
+
+    ;; Don't switch if we have no reasons selected
+    (when gdb-switch-reasons
+      ;; Switch from another stopped thread only if we have
+      ;; gdb-switch-when-another-stopped:
+      (when (or gdb-switch-when-another-stopped
+                (not (string= "stopped"
+                              (gdb-get-field (gdb-current-buffer-thread) 'state))))
+        ;; Switch if current reason has been selected or we have no
+        ;; reasons
+        (if (or (eq gdb-switch-reasons t)
+                (member reason gdb-switch-reasons))
+            (progn
+              (setq gdb-thread-number thread-id)
+              (message (concat "Switched to thread " thread-id)))
+          (message (format "Thread %s stopped" thread-id)))))
+    
+  ;; Print "(gdb)" to GUD console
   (when gdb-first-done-or-error
     (setq gdb-filter-output (concat gdb-filter-output gdb-prompt-name)))
 
+  ;; In non-stop, we update information as soon as another thread gets
+  ;; stopped
   (when (or gdb-first-done-or-error
             gdb-non-stop)
     (gdb-update)
-    (setq gdb-first-done-or-error nil)))
+    (setq gdb-first-done-or-error nil))
+
+  (run-hook-with-args 'gdb-stopped-hook result)))
 
 ;; Remove the trimmings from log stream containing debugging messages
 ;; being produced by GDB's internals, use warning face and send to GUD
@@ -2071,14 +2161,8 @@ FILE is a full path."
 
 (defun gdb-thread-list-handler-custom ()
   (let* ((res (gdb-json-partial-output))
-         (threads-list (gdb-get-field res 'threads))
-         (current-thread (gdb-get-field res 'current-thread-id)))
+         (threads-list (gdb-get-field res 'threads)))
     (setq gdb-threads-list nil)
-    (when (and current-thread
-               (not (string-equal current-thread gdb-thread-number)))
-      ;; Implicitly switch thread (in case previous one dies)
-      (message (concat "GDB switched to another thread: " current-thread))
-      (setq gdb-thread-number current-thread))
     (set-marker gdb-thread-position nil)
     (dolist (thread (reverse threads-list))
       (let ((running (string-equal (gdb-get-field thread 'state) "running")))
