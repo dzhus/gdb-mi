@@ -1178,6 +1178,7 @@ DOC is an optional documentation string."
 
 (defun gdb-parent-mode ()
   "Generic mode to derive all other GDB buffer modes from."
+  (kill-all-local-variables)
   (setq buffer-read-only t)
   (buffer-disable-undo)
   ;; Delete buffer from gdb-buf-publisher when it's killed
