@@ -35,10 +35,26 @@
    We still send -thread-select to GDB when selecting thread via
    `gdb-select-thread`.
    
-** TODO Handle -exec properly
+** IN PROGRESS Handle -exec properly                                     :ui:
    When issued via thread list buffer, use only current thread; use
    --all threads otherwise. Make this behaviour customizable.
-    
+
+   There should be a A/T selector `gdb-gud-control-all-threads` on the
+   toolbar which would select whether GUD commands should apply to all
+   threads or to the current one only.
+
+   In non-stop, when `gdb-gud-control-all-threads` is nil (we are in T
+   mode), gud-running is changed whenever we change current selected
+   thread in Emacs.
+
+   To show toolbar/menu items properly when `gdb-control-all-threads`
+   is t (we are in A mode), we need to check if all threads are
+   running and use `gdb-running-threads-count` and
+   `gdb-stopped-threads-count` updated via -thread-info handler. This
+   way we'll be able to get «Continue All» button when at least some
+   threads are stopped and «Stop All» button when some threads are
+   running.
+   
 * TODO [#A] Improve multi-thread UI                                 :threads:
   Thread-bound buffers produce just a big mess. When observing several
   threads, information should be presented in a more usable way.

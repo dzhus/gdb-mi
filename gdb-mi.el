@@ -123,7 +123,10 @@ information on the specified thread by wrapping GDB/MI commands
 in `gdb-current-context-command'.
 
 This variable may be updated implicitly by GDB via `gdb-stopped'
-or explicitly by `gdb-select-thread'.")
+or explicitly by `gdb-select-thread'.
+
+Only `gdb-setq-thread-number' should be used to change this
+value.")
 
 ;; Used to show overlay arrow in source buffer. All set in
 ;; gdb-get-main-selected-frame. Disassembly buffer should not use
@@ -141,6 +144,18 @@ or explicitly by `gdb-select-thread'.")
 Keys are thread numbers (in strings) and values are structures as
 returned from -thread-info by `gdb-json-partial-output'. Updated in
 `gdb-thread-list-handler-custom'.")
+
+(defvar gdb-running-threads-count nil
+  "Number of currently running threads.
+
+Nil means that no information is available.
+
+Updated in `gdb-thread-list-handler-custom'.")
+
+(defvar gdb-stopped-threads-count nil
+  "Number of currently stopped threads.
+
+See also `gdb-running-threads-count'.")
 
 (defvar gdb-breakpoints-list nil
   "Associative list of breakpoints provided by \"-break-list\" MI command.
@@ -227,6 +242,13 @@ Elements are either function names or pairs (buffer . function)")
 (defcustom gdb-non-stop t
   "When in non-stop mode, stopped threads can be examined while
 other threads continue to execute."
+  :type 'boolean
+  :group 'gdb
+  :version "23.2")
+
+(defcustom gdb-control-all-threads t
+  "When enabled, execution commands affect all threads when in
+non-stop mode."
   :type 'boolean
   :group 'gdb
   :version "23.2")
@@ -1436,6 +1458,18 @@ valid signal handlers.")
       (setcar (nthcdr 5 var) nil))
     (gdb-var-update)))
 
+(defun gdb-setq-thread-number (number)
+  "Set `gdb-thread-number' to NUMBER and update `gud-running' when in non-stop/T.
+
+When `gdb-gud-control-all-threads' is nil, set `gud-running'
+according to the state of new selected thread."
+  (setq gdb-thread-number number)
+  (when (and gdb-non-stop
+             (not gdb-gud-control-all-threads))
+    (setq gud-running
+          (string= (gdb-get-field (gdb-current-buffer-thread) 'state)
+                   "running"))))
+
 ;; GUD displays the selected GDB frame.  This might might not be the current
 ;; GDB frame (after up, down etc).  If no GDB frame is visible but the last
 ;; visited breakpoint is, use that window.
@@ -1534,9 +1568,10 @@ valid signal handlers.")
   (gdb-force-mode-line-update
    (propertize gdb-inferior-status 'face font-lock-type-face))
   (setq gdb-active-process t)
-  (setq gud-running t)
-  (when gdb-non-stop
-    (gdb-emit-signal gdb-buf-publisher 'update-threads)))
+  ;; gud-running is updated here for all-stop mode only
+  (if gdb-non-stop
+      (gdb-emit-signal gdb-buf-publisher 'update-threads)
+    (setq gud-running t)))
 
 (defun gdb-starting (output-field)
   ;; CLI commands don't emit ^running at the moment so use gdb-running too.
@@ -1546,14 +1581,16 @@ valid signal handlers.")
   (gdb-force-mode-line-update
    (propertize gdb-inferior-status 'face font-lock-type-face))
   (setq gdb-active-process t)
-  (setq gud-running t))
+  (when (not gdb-non-stop)
+    (setq gud-running t)))
 
 ;; -break-insert -t didn't give a reason before gdb 6.9
 
 (defun gdb-stopped (output-field)
   "Given the contents of *stopped MI async record, select new
 current thread and update GDB buffers."
-  (setq gud-running nil)
+  (when (not gdb-non-stop)
+    (setq gud-running nil))
   ;; Reason is available with target-async only
   (let* ((result (gdb-json-string output-field))
          (reason (gdb-get-field result 'reason))
@@ -1588,7 +1625,7 @@ current thread and update GDB buffers."
         (if (or (eq gdb-switch-reasons t)
                 (member reason gdb-switch-reasons))
             (progn
-              (setq gdb-thread-number thread-id)
+              (gdb-setq-thread-number thread-id)
               (message (concat "Switched to thread " thread-id)))
           (message (format "Thread %s stopped" thread-id)))))
     
@@ -2163,12 +2200,19 @@ FILE is a full path."
   (let* ((res (gdb-json-partial-output))
          (threads-list (gdb-get-field res 'threads)))
     (setq gdb-threads-list nil)
+    (setq gdb-running-threads-count 0)
+    (setq gdb-stopped-threads-count 0)
     (set-marker gdb-thread-position nil)
+
     (dolist (thread (reverse threads-list))
       (let ((running (string-equal (gdb-get-field thread 'state) "running")))
       (add-to-list 'gdb-threads-list
                    (cons (gdb-get-field thread 'id)
                          thread))
+      (if running
+          (incf gdb-running-threads-count)
+        (incf gdb-stopped-threads-count))
+
       (insert (apply 'format `("%s (%s) %s"
                                ,@(gdb-get-many-fields thread 'id 'target-id 'state))))
       ;; Include frame information for stopped threads
@@ -2217,7 +2261,7 @@ on the current line."
   (if (string-equal (gdb-get-field thread 'state) "running")
       (error "Cannot select running thread")
     (let ((new-id (gdb-get-field thread 'id)))
-      (setq gdb-thread-number new-id)
+      (gdb-setq-thread-number new-id)
       (gdb-input (list (concat "-thread-select " new-id) 'ignore))
       (gdb-update)))
   "Select the thread at current line of threads buffer.")
