@@ -505,7 +505,7 @@ detailed description of this mode.
   (gud-def gud-next   (gdb-gud-context-call "-exec-next" "%p" t)
            "\C-n"
 	   "Step one line (skip functions).")
-  (gud-def gud-nexti  (gdb-gud-context-call "nexti" "%p")
+  (gud-def gud-nexti  (gdb-gud-context-call "-exec-next-instruction" "%p" t)
            nil
 	   "Step one instruction (skip functions).")
   (gud-def gud-cont   (gdb-gud-context-call "-exec-continue")
