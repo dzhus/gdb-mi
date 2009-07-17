@@ -2887,6 +2887,7 @@ corresponding to the mode line clicked."
   "Major mode for GDB disassembly information.
 
 \\{gdb-disassembly-mode-map}"
+  ;; TODO Rename overlay variable for disassembly mode
   (add-to-list 'overlay-arrow-variable-list 'gdb-overlay-arrow-position)
   (setq fringes-outside-margins t)
   (setq gdb-overlay-arrow-position (make-marker))
@@ -3558,6 +3559,9 @@ Kills the gdb buffers, and resets variables and the source buffers."
   (setq gdb-stack-position nil)
   (setq overlay-arrow-variable-list
 	(delq 'gdb-stack-position overlay-arrow-variable-list))
+  (setq gdb-thread-position nil)
+  (setq overlay-arrow-variable-list
+	(delq 'gdb-thread-position overlay-arrow-variable-list))
   (if (boundp 'speedbar-frame) (speedbar-timer-fn))
   (setq gud-running nil)
   (setq gdb-active-process nil)
