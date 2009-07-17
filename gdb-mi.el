@@ -115,7 +115,7 @@
   "Address of previous memory page for program memory buffer.")
 
 (defvar gdb-frame-number "0")
-(defvar gdb-thread-number "1"
+(defvar gdb-thread-number nil
   "Main current thread.
 
 Invalidation triggers use this variable to query GDB for
@@ -1384,8 +1384,11 @@ static char *magick[] = {
 (defun gdb-current-context-command (command)
   "Add --thread option to gdb COMMAND.
 
-Option value is taken from `gdb-thread-number'."
-  (concat command " --thread " gdb-thread-number))
+Option value is taken from `gdb-thread-number'. If
+`gdb-thread-number' is nil, COMMAND is returned unchanged."
+  (if gdb-thread-number
+      (concat command " --thread " gdb-thread-number)
+    command))
 
 (defun gdb-current-context-buffer-name (name)
   "Add thread information and asterisks to string NAME."
@@ -2229,6 +2232,7 @@ FILE is a full path."
       (add-text-properties (line-beginning-position)
                            (line-end-position)
                            `(gdb-thread ,thread))
+      ;; We assume that gdb-thread-number is non-nil by this time
       (when (string-equal gdb-thread-number
                           (gdb-get-field thread 'id))
         (set-marker gdb-thread-position (line-beginning-position))))
