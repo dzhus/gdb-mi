@@ -57,6 +57,12 @@
 ** IN PROGRESS gud-stop
    gud-stop-subjob calls comint-stop-subjob. Certainly we'd like to
    stop program execution with one big button.
+
+** IN PROGRESS Menu options clarification                                :ui:
+   Setting gdb-non-stop in the menu does not immediately change GDB
+   mode — user should be notified about the need to restart gdb
+   session.
+
 * TODO [#A] Improve multi-thread UI                                 :threads:
   Thread-bound buffers produce just a big mess. When observing several
   threads, information should be presented in a more usable way.
