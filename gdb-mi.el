@@ -1510,14 +1510,13 @@ valid signal handlers.")
 (defun gdb-update-gud-running ()
   "Set `gud-running' according to the state of current thread.
 
-This works for GDB all-stop mode as well, because in all-stop all
-threads are either running or stopped.
-
 Note that when `gdb-gud-control-all-threads' is t, `gud-running'
 cannot be reliably used to determine whether or not execution
 control buttons should be shown in menu or toolbar. Use
 `gdb-running-threads-count' and `gdb-stopped-threads-count'
-instead."
+instead.
+
+For all-stop mode, thread information is unavailable while target is running"
   (setq gud-running
         (string= (gdb-get-field (gdb-current-buffer-thread) 'state)
                  "running")))
@@ -1619,6 +1618,8 @@ instead."
   (setq gdb-inferior-status "running")
   (gdb-force-mode-line-update
    (propertize gdb-inferior-status 'face font-lock-type-face))
+  (when (not gdb-non-stop)
+    (setq gud-running t))
   (setq gdb-active-process t)
   (gdb-emit-signal gdb-buf-publisher 'update-threads))
 
@@ -1684,6 +1685,7 @@ current thread and update GDB buffers."
   ;; stopped
   (when (or gdb-first-done-or-error
             gdb-non-stop)
+    ;; In all-stop this updates gud-running properly as well.
     (gdb-update)
     (setq gdb-first-done-or-error nil))
   (run-hook-with-args 'gdb-stopped-hook result)))

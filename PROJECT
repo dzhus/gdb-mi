@@ -51,11 +51,14 @@
    thread in Emacs.
 
    We use `gdb-update-gud-running` to set `gud-running` properly for
-   all-stop and non-stop/T cases. This function should be called
+   non-stop/T mode. This function should be called
    whenever current thread is changed (`gdb-select-thread`, `gdb-stop`) or some
    thread goes running (see `gdb-running`). We call it from
    `gdb-thread-list-handler-custom` to ensure that by the time we
    check current thread state this information is up-to-date.
+
+   For all-stop mode, we can't get information about all threads while
+   running, so we set it in the old way.
 
    To show toolbar/menu items properly when `gdb-gud-control-all-threads`
    is t (we are in non-stop/A mode), we need to check if all threads are
