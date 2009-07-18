@@ -2309,12 +2309,10 @@ on the current line."
      ,doc))
 
 (def-gdb-thread-buffer-command gdb-select-thread
-  (if (string-equal (gdb-get-field thread 'state) "running")
-      (error "Cannot select running thread")
-    (let ((new-id (gdb-get-field thread 'id)))
-      (gdb-setq-thread-number new-id)
-      (gdb-input (list (concat "-thread-select " new-id) 'ignore))
-      (gdb-update)))
+  (let ((new-id (gdb-get-field thread 'id)))
+    (gdb-setq-thread-number new-id)
+    (gdb-input (list (concat "-thread-select " new-id) 'ignore))
+    (gdb-update))
   "Select the thread at current line of threads buffer.")
 
 (def-gdb-thread-buffer-simple-command
