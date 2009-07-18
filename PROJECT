@@ -51,9 +51,11 @@
    thread in Emacs.
 
    We use `gdb-update-gud-running` to set `gud-running` properly for
-   all-stop and non-stop/T cases. This function is called whenever
-   current thread is changed (`gdb-select-thread` or `gdb-stopped`) or
-   some thread goes running (see `gdb-running`).
+   all-stop and non-stop/T cases. This function should be called
+   whenever current thread is changed (`gdb-select-thread`, `gdb-stop`) or some
+   thread goes running (see `gdb-running`). We call it from
+   `gdb-thread-list-handler-custom` to ensure that by the time we
+   check current thread state this information is up-to-date.
 
    To show toolbar/menu items properly when `gdb-gud-control-all-threads`
    is t (we are in non-stop/A mode), we need to check if all threads are
@@ -91,6 +93,12 @@
 * TODO [#B] Cleanup unused buffers                               :threads:ui:
   Kill buffers which are bound to threads which already exited. This
   can be done by handling =thread-exited notification.
+
+* TODO [#B] Make sure that threads list handler is executed first
+  Currently we can kill thread list buffer so when it's resurrected in
+  `gdb-update`, it goes to the end of `gdb-buf-publisher` list. As the
+  result, other handlers may get outdated information from
+  `gdb-threads-list`.
 * Disassembly buffer
 ** TODO Hyperlinks for jump instructions in disassembly buffer       :ui:new:
    Add clickable buttons for jmp, jl arguments

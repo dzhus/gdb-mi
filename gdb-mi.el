@@ -1620,8 +1620,7 @@ instead."
   (gdb-force-mode-line-update
    (propertize gdb-inferior-status 'face font-lock-type-face))
   (setq gdb-active-process t)
-  (gdb-emit-signal gdb-buf-publisher 'update-threads)
-  (gdb-update-gud-running))
+  (gdb-emit-signal gdb-buf-publisher 'update-threads))
 
 (defun gdb-starting (output-field)
   ;; CLI commands don't emit ^running at the moment so use gdb-running too.
@@ -1687,9 +1686,6 @@ current thread and update GDB buffers."
             gdb-non-stop)
     (gdb-update)
     (setq gdb-first-done-or-error nil))
-  ;; We update gud-running here because we need to make sure that
-  ;; gdb-threads-list is up-to-date
-  (gdb-update-gud-running)
   (run-hook-with-args 'gdb-stopped-hook result)))
 
 ;; Remove the trimmings from log stream containing debugging messages
@@ -2283,7 +2279,10 @@ FILE is a full path."
       (when (string-equal gdb-thread-number
                           (gdb-get-field thread 'id))
         (set-marker gdb-thread-position (line-beginning-position))))
-      (newline))))
+      (newline))
+    ;; We update gud-running here because we need to make sure that
+    ;; gdb-threads-list is up-to-date
+    (gdb-update-gud-running)))
 
 (defmacro def-gdb-thread-buffer-command (name custom-defun &optional doc)
   "Define a NAME command which will act upon thread on the current line.
