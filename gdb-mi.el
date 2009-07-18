@@ -3431,8 +3431,7 @@ thread. Called from `gdb-update'."
   (define-key menu [breakpoints]
     '("Breakpoints" . gdb-frame-breakpoints-buffer)))
 
-(let ((menu (make-sparse-keymap "GDB-MI"))
-      (submenu (make-sparse-keymap "GUD thread control mode")))
+(let ((menu (make-sparse-keymap "GDB-MI")))
   (define-key menu [gdb-customize]
   '(menu-item "Customize" (lambda () (interactive) (customize-group 'gdb))
 	      :help "Customize Gdb Graphical Mode options."))
@@ -3445,34 +3444,34 @@ thread. Called from `gdb-update'."
 	      :help "Restore standard layout for debug session."))
   (define-key menu [sep1]
     '(menu-item "--"))
-  (define-key submenu [all-threads]
-    '(menu-item "All threads"
+  (define-key menu [all-threads]
+    '(menu-item "GUD controls all threads"
                 (lambda ()
                   (interactive)
                   (setq gdb-gud-control-all-threads t))
                 :help "GUD start/stop commands apply to all threads"
                 :button (:radio . gdb-gud-control-all-threads)))
-  (define-key submenu [current-thread]
-    '(menu-item "Current thread"
+  (define-key menu [current-thread]
+    '(menu-item "GUD controls current thread"
                 (lambda ()
                   (interactive)
                   (setq gdb-gud-control-all-threads nil))
                 :help "GUD start/stop commands apply to current thread only"
                 :button (:radio . (not gdb-gud-control-all-threads))))
-  (define-key menu [thread-control]
-      `("GUD thread control mode" . ,submenu))
-  (define-key gud-menu-map [mi]
-    `(menu-item "GDB-MI" ,menu :visible (eq gud-minor-mode 'gdbmi)))
+  (define-key menu [sep2]
+    '(menu-item "--"))
+  (define-key menu [gdb-customize-reasons]
+    '(menu-item "Customize switching..."
+                (lambda ()
+                  (interactive)
+                  (customize-option 'gdb-switch-reasons))))
   (define-key menu [gdb-switch-when-another-stopped]
     (menu-bar-make-toggle gdb-toggle-switch-when-another-stopped gdb-switch-when-another-stopped
                           "Automatically switch to stopped thread"
                           "GDB thread switching %s"
                           "Switch to stopped thread"))
-  (define-key menu [gdb-non-stop]
-    (menu-bar-make-toggle gdb-toggle-non-stop gdb-non-stop
-                          "Non-stop mode"
-                          "GDB non-stop mode %s"
-                          "Allow examining stopped threads while others continue to execute")))
+  (define-key gud-menu-map [mi]
+    `(menu-item "GDB-MI" ,menu :visible (eq gud-minor-mode 'gdbmi))))
 
 (defun gdb-frame-gdb-buffer ()
   "Display GUD buffer in a new frame."
