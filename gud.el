@@ -136,11 +136,14 @@ Used to grey out relevant toolbar icons.")
 (defun gud-stop-subjob ()
   (interactive)
   (with-current-buffer gud-comint-buffer
-    (if (string-equal gud-target-name "emacs")
-	(comint-stop-subjob)
-      (if (eq gud-minor-mode 'jdb)
-	  (gud-call "suspend")
-	(comint-interrupt-subjob)))))
+    (cond ((string-equal gud-target-name "emacs")
+           (comint-stop-subjob))
+          ((eq gud-minor-mode 'jdb)
+           (gud-call "suspend"))
+          ((eq gud-minor-mode 'gdbmi)
+           (gdb-gud-context-call "-exec-interrupt" nil nil t))
+          (t 
+           (comint-interrupt-subjob)))))
 
 (easy-mmode-defmap gud-menu-map
   '(([help]     "Info (debugger)" . gud-goto-info)

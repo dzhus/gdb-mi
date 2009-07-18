@@ -54,7 +54,8 @@
    way we'll be able to get «Continue All» button when at least some
    threads are stopped and «Stop All» button when some threads are
    running.
-** IN PROGRESS gud-stop
+** DONE gud-stop
+   CLOSED: [2009-07-18 Сбт 03:36]
    gud-stop-subjob calls comint-stop-subjob. Certainly we'd like to
    stop program execution with one big button.
 
