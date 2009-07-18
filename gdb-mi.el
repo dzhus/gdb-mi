@@ -619,6 +619,7 @@ detailed description of this mode.
   ;; (re-)initialise
   (setq gdb-selected-frame nil
 	gdb-frame-number nil
+        gdb-thread-number nil
 	gdb-var-list nil
 	gdb-pending-triggers nil
 	gdb-output-sink 'user
@@ -1430,12 +1431,16 @@ Option value is taken from `gdb-thread-number'. If
     command))
 
 (defun gdb-current-context-buffer-name (name)
-  "Add thread information and asterisks to string NAME."
+  "Add thread information and asterisks to string NAME.
+
+If `gdb-thread-number' is nil, just wrap NAME in asterisks."
   (concat "*" name
-          (if (local-variable-p 'gdb-thread-number) 
-              " (bound to thread "
-            " (current thread ")
-          gdb-thread-number ")*"))
+          (format
+           (cond ((local-variable-p 'gdb-thread-number) " (bound to thread %s)")
+                 (gdb-thread-number " (current thread %s)")
+                 (t ""))
+           gdb-thread-number)
+          "*"))
 
 
 (defcustom gud-gdb-command-name "gdb -i=mi"
