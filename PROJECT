@@ -42,13 +42,21 @@
    There should be a A/T selector `gdb-gud-control-all-threads` on the
    toolbar which would select whether GUD commands should apply to all
    threads or to the current one only.
-
+** IN PROGRESS Show Go/Stop toolbar and menu items only when needed      :ui:
+   In all-stop «Go» button is shown when `gud-running` is t. «Stop» is
+   shown when `gud-running` is nil.
+   
    In non-stop, when `gdb-gud-control-all-threads` is nil (we are in T
    mode), gud-running is changed whenever we change current selected
    thread in Emacs.
 
+   We use `gdb-update-gud-running` to set `gud-running` properly for
+   all-stop and non-stop/T cases. This function is called whenever
+   current thread is changed (`gdb-select-thread` or `gdb-stopped`) or
+   some thread goes running (see `gdb-running`).
+
    To show toolbar/menu items properly when `gdb-gud-control-all-threads`
-   is t (we are in A mode), we need to check if all threads are
+   is t (we are in non-stop/A mode), we need to check if all threads are
    running and use `gdb-running-threads-count` and
    `gdb-stopped-threads-count` updated via -thread-info handler. This
    way we'll be able to get «Continue All» button when at least some

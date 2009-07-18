@@ -1499,17 +1499,28 @@ valid signal handlers.")
       (setcar (nthcdr 5 var) nil))
     (gdb-var-update)))
 
+;; gdb-setq-thread-number and gdb-update-gud-running are decoupled
+;; because we may need to update current gud-running value without
+;; changing current thread (see gdb-running)
 (defun gdb-setq-thread-number (number)
-  "Set `gdb-thread-number' to NUMBER and update `gud-running' when in non-stop/T.
-
-When `gdb-gud-control-all-threads' is nil, set `gud-running'
-according to the state of new selected thread."
+  "Set `gdb-thread-number' to NUMBER and update `gud-running'."
   (setq gdb-thread-number number)
-  (when (and gdb-non-stop
-             (not gdb-gud-control-all-threads))
-    (setq gud-running
-          (string= (gdb-get-field (gdb-current-buffer-thread) 'state)
-                   "running"))))
+  (gdb-update-gud-running))
+
+(defun gdb-update-gud-running ()
+  "Set `gud-running' according to the state of current thread.
+
+This works for GDB all-stop mode as well, because in all-stop all
+threads are either running or stopped.
+
+Note that when `gdb-gud-control-all-threads' is t, `gud-running'
+cannot be reliably used to determine whether or not execution
+control buttons should be shown in menu or toolbar. Use
+`gdb-running-threads-count' and `gdb-stopped-threads-count'
+instead."
+  (setq gud-running
+        (string= (gdb-get-field (gdb-current-buffer-thread) 'state)
+                 "running")))
 
 ;; GUD displays the selected GDB frame.  This might might not be the current
 ;; GDB frame (after up, down etc).  If no GDB frame is visible but the last
@@ -1609,10 +1620,8 @@ according to the state of new selected thread."
   (gdb-force-mode-line-update
    (propertize gdb-inferior-status 'face font-lock-type-face))
   (setq gdb-active-process t)
-  ;; gud-running is updated here for all-stop mode only
-  (if gdb-non-stop
-      (gdb-emit-signal gdb-buf-publisher 'update-threads)
-    (setq gud-running t)))
+  (gdb-emit-signal gdb-buf-publisher 'update-threads)
+  (gdb-update-gud-running))
 
 (defun gdb-starting (output-field)
   ;; CLI commands don't emit ^running at the moment so use gdb-running too.
@@ -1630,8 +1639,6 @@ according to the state of new selected thread."
 (defun gdb-stopped (output-field)
   "Given the contents of *stopped MI async record, select new
 current thread and update GDB buffers."
-  (when (not gdb-non-stop)
-    (setq gud-running nil))
   ;; Reason is available with target-async only
   (let* ((result (gdb-json-string output-field))
          (reason (gdb-get-field result 'reason))
@@ -1680,7 +1687,9 @@ current thread and update GDB buffers."
             gdb-non-stop)
     (gdb-update)
     (setq gdb-first-done-or-error nil))
-
+  ;; We update gud-running here because we need to make sure that
+  ;; gdb-threads-list is up-to-date
+  (gdb-update-gud-running)
   (run-hook-with-args 'gdb-stopped-hook result)))
 
 ;; Remove the trimmings from log stream containing debugging messages
