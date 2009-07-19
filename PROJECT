@@ -18,7 +18,8 @@
 
    *running messages are asynchronously issued whenever new thread is
    created. We also use =thread-exited to update threads buffer.
-** IN PROGRESS Handle *stopped and =thread-selected to select new main current thread
+** DONE Handle *stopped and =thread-selected to select new main current thread
+   CLOSED: [2009-07-18 Сбт 19:41]
    Current thread selection should be handled in Emacs (in gdb-stopped
    handler). 
   
@@ -77,6 +78,20 @@
    mode — user should be notified about the need to restart gdb
    session.
 
+
+* DONE [#A] Proper =thread-selected handler                         :threads:
+  CLOSED: [2009-07-19 Вск 13:43]
+  Type `thread N` in GUD buffer and you'll get outdated information
+  about all the buffers because this command makes GDB emit `^done`
+  followed by `=thread-selected` notification. `^done` causes
+  `gdb-update` as usually. I've made handler for =thread-selected
+  switch to that thread and call `gdb-update` again, but things happen
+  to fast and second call gets cut off by our beloved
+  gdb-pending-triggers.
+
+  Solution is `gdb-wait-for-pending` macro: it guarantees that its
+  body will get executed when `gdb-pending-triggers` is empty.
+
 * TODO [#A] Improve multi-thread UI                                 :threads:
   Thread-bound buffers produce just a big mess. When observing several
   threads, information should be presented in a more usable way.
@@ -87,7 +102,6 @@
 
   - tab-like buttons for different threads in buffers showing
     locals&registers
-
 * TODO [#C] Support --frame                                             :new:
   It should be possible to see locals for different frames, not only
   the top one. Does it make sense to update such buffers as we step

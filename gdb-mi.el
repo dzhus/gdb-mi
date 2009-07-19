@@ -233,6 +233,21 @@ Elements are either function names or pairs (buffer . function)")
   `(setq gdb-pending-triggers
          (delete ,item gdb-pending-triggers)))
 
+(defvar gdb-wait-for-pending-timeout 0.5)
+
+(defmacro gdb-wait-for-pending (&rest body)
+  "Wait until `gdb-pending-triggers' is empty and execute BODY.
+
+This function checks `gdb-pending-triggers' value every
+`gdb-wait-for-pending' seconds."
+  (run-with-timer 
+   gdb-wait-for-pending-timeout nil
+   `(lambda ()
+      (if (not gdb-pending-triggers)
+          (progn
+            ,@body)
+        (gdb-wait-for-pending ,@body)))))
+  
 (defcustom gdb-debug-log-max 128
   "Maximum size of `gdb-debug-log'.  If nil, size is unlimited."
   :group 'gdb
@@ -1522,7 +1537,8 @@ control buttons should be shown in menu or toolbar. Use
 `gdb-running-threads-count' and `gdb-stopped-threads-count'
 instead.
 
-For all-stop mode, thread information is unavailable while target is running"
+For all-stop mode, thread information is unavailable while target
+is running."
   (setq gud-running
         (string= (gdb-get-field (gdb-current-buffer-thread) 'state)
                  "running")))
@@ -1556,6 +1572,7 @@ For all-stop mode, thread information is unavailable while target is running"
     (gdb-stopped . "\\*stopped,?\\(.*?\\)\n")
     (gdb-running . "\\*running,\\(.*?\n\\)")
     (gdb-thread-created . "=thread-created,\\(.*?\n\\)")
+    (gdb-thread-selected . "=thread-selected,\\(.*?\\)\n")
     (gdb-thread-exited . "=thread-exited,\\(.*?\n\\)")))
 
 (defun gud-gdbmi-marker-filter (string)
@@ -1619,6 +1636,16 @@ For all-stop mode, thread information is unavailable while target is running"
 (defun gdb-thread-created (output-field))
 (defun gdb-thread-exited (output-field)
   (gdb-emit-signal gdb-buf-publisher 'update-threads))
+
+(defun gdb-thread-selected (output-field)
+  "Handler for =thread-selected MI output record.
+
+Sets `gdb-thread-number' to new id."
+  (let* ((result (gdb-json-string output-field))
+         (thread-id (gdb-get-field result 'id)))
+    (gdb-setq-thread-number thread-id)
+    (gdb-wait-for-pending
+     (gdb-update))))
 
 (defun gdb-running (output-field)
   (setq gdb-inferior-status "running")
