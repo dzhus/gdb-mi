@@ -1987,8 +1987,11 @@ HANDLER-NAME handler uses customization of CUSTOM-DEFUN. See
             (propertize "n" 'face  font-lock-comment-face))) "\t"
         (gdb-get-field breakpoint 'times) "\t"
         (gdb-get-field breakpoint 'addr)))
-      (let ((at (gdb-get-field breakpoint 'at)))
-        (cond ((not at)
+      (let ((at (gdb-get-field breakpoint 'at))
+            (pending (gdb-get-field breakpoint 'pending)))
+        (cond (pending (insert "  " pending))
+              (at (insert " " at))
+              (t
                (progn
                  (insert 
                   (concat " in "
@@ -1998,14 +2001,12 @@ HANDLER-NAME handler uses customization of CUSTOM-DEFUN. See
                  (add-text-properties (line-beginning-position)
                                       (line-end-position)
                                       '(mouse-face highlight
-                                        help-echo "mouse-2, RET: visit breakpoint"))))
-              (at (insert (concat " " at)))
-              (t (insert (gdb-get-field breakpoint 'original-location)))))
+                                                   help-echo "mouse-2, RET: visit breakpoint")))))
       (add-text-properties (line-beginning-position)
                            (line-end-position)
                            `(gdb-breakpoint ,breakpoint))
       (newline))
-    (gdb-place-breakpoints)))
+    (gdb-place-breakpoints))))
 
 ;; Put breakpoint icons in relevant margins (even those set in the GUD buffer).
 (defun gdb-place-breakpoints ()

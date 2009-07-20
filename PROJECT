@@ -116,6 +116,13 @@
   `gdb-update`, it goes to the end of `gdb-buf-publisher` list. As the
   result, other handlers may get outdated information from
   `gdb-threads-list`.
+
+* TODO [#B] Fix multiple overlay arrows                          :threads:ui:
+  When observing disassembly/stack buffer for several threads, overlay
+  arrow is shown only in one of them.
+
+* DONE Fix pending breakpoints
+  CLOSED: [2009-07-21 Втр 00:38]
 * Disassembly buffer
 ** TODO Hyperlinks for jump instructions in disassembly buffer       :ui:new:
    Add clickable buttons for jmp, jl arguments
