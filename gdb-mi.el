@@ -2266,6 +2266,23 @@ FILE is a full path."
     (define-key map "s" 'gdb-step-thread)
     map))
 
+(defmacro gdb-propertize-header (name buffer help-echo mouse-face face)
+  `(propertize ,name
+	       'help-echo ,help-echo 
+	       'mouse-face ',mouse-face
+	       'face ',face
+	       'local-map
+	       (gdb-make-header-line-mouse-map
+		'mouse-1
+		(lambda (event) (interactive "e")
+		  (save-selected-window
+		    (select-window (posn-window (event-start event)))
+		    (set-window-dedicated-p (selected-window) nil)
+		    (switch-to-buffer
+		     (gdb-get-buffer-create ',buffer))
+		    (setq header-line-format(gdb-set-header ',buffer))
+		    (set-window-dedicated-p (selected-window) t))))))
+
 (defvar gdb-breakpoints-header
   (list
    (gdb-propertize-header "Breakpoints" gdb-breakpoints-buffer
@@ -2429,23 +2446,6 @@ line."
   gdb-step-thread
   "-exec-step"
   "Step thread at current line.")
-
-(defmacro gdb-propertize-header (name buffer help-echo mouse-face face)
-  `(propertize ,name
-	       'help-echo ,help-echo 
-	       'mouse-face ',mouse-face
-	       'face ',face
-	       'local-map
-	       (gdb-make-header-line-mouse-map
-		'mouse-1
-		(lambda (event) (interactive "e")
-		  (save-selected-window
-		    (select-window (posn-window (event-start event)))
-		    (set-window-dedicated-p (selected-window) nil)
-		    (switch-to-buffer
-		     (gdb-get-buffer-create ',buffer))
-		    (setq header-line-format(gdb-set-header ',buffer))
-		    (set-window-dedicated-p (selected-window) t))))))
 
 (defun gdb-set-header (buffer)
   (cond ((eq buffer 'gdb-locals-buffer)
