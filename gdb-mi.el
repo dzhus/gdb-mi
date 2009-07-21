@@ -2022,7 +2022,7 @@ HANDLER-NAME handler uses customization of CUSTOM-DEFUN. See
                                            ; an associative list
              (line (gdb-get-field breakpoint 'line)))
         (when line
-          (let ((file (gdb-get-field breakpoint 'file))
+          (let ((file (gdb-get-field breakpoint 'fullname))
                 (flag (gdb-get-field breakpoint 'enabled))
                 (bptno (gdb-get-field breakpoint 'number)))
             (unless (file-exists-p file)
