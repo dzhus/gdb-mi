@@ -1639,8 +1639,7 @@ is running."
     (setq gdb-filter-output
           (concat output-field gdb-filter-output))))
 
-(defun gdb-ignored-notification (output-field)
-  (message output-field))
+(defun gdb-ignored-notification (output-field))
 
 ;; gdb-invalidate-threads is defined to accept 'update-threads signal
 (defun gdb-thread-created (output-field))
