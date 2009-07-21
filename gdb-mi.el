@@ -1104,35 +1104,35 @@ thread."
   "Get current stack frame object for thread of current buffer."
   (gdb-get-field (gdb-current-buffer-thread) 'frame))
 
-(defun gdb-get-buffer (key &optional thread)
+(defun gdb-get-buffer (buffer-type &optional thread)
   "Get a specific GDB buffer.
 
-In that buffer, `gdb-buffer-type' must be equal to KEY and
-`gdb-thread-number' (if provided) must be equal to THREAD."
+In that buffer, `gdb-buffer-type' must be equal to BUFFER-TYPE
+and `gdb-thread-number' (if provided) must be equal to THREAD."
   (catch 'found
     (dolist (buffer (buffer-list) nil)
       (with-current-buffer buffer
-        (when (and (eq gdb-buffer-type key)
+        (when (and (eq gdb-buffer-type buffer-type)
                    (or (not thread)
                        (equal gdb-thread-number thread)))
           (throw 'found buffer))))))
 
-(defun gdb-get-buffer-create (key &optional thread)
-  "Create a new GDB buffer of the type specified by KEY.
-The key should be one of the cars in `gdb-buffer-rules'.
+(defun gdb-get-buffer-create (buffer-type &optional thread)
+  "Create a new GDB buffer of the type specified by BUFFER-TYPE.
+The buffer-type should be one of the cars in `gdb-buffer-rules'.
 
 If THREAD is non-nil, it is assigned to `gdb-thread-number'
 buffer-local variable of the new buffer.
 
 If buffer's mode returns a symbol, it's used to register "
-  (or (gdb-get-buffer key thread)
-      (let ((rules (assoc key gdb-buffer-rules))
+  (or (gdb-get-buffer buffer-type thread)
+      (let ((rules (assoc buffer-type gdb-buffer-rules))
 	     (new (generate-new-buffer "limbo")))
 	(with-current-buffer new
 	  (let ((mode (gdb-rules-buffer-mode rules))
                 (trigger (gdb-rules-update-trigger rules)))
 	    (when mode (funcall mode))
-	    (setq gdb-buffer-type key)
+	    (setq gdb-buffer-type buffer-type)
             (when thread
               (set (make-local-variable 'gdb-thread-number) thread))
 	    (set (make-local-variable 'gud-minor-mode)
@@ -3417,6 +3417,12 @@ thread. Called from `gdb-update'."
 
 ;;;; Window management
 (defun gdb-display-buffer (buf dedicated &optional frame)
+  "Show buffer BUF.
+
+If BUF is already displayed in some window, show it, deiconifying
+the frame if necessary. Otherwise, find least recently used
+window and show BUF there, if the window is not used for GDB
+already, in which case that window is splitted first."
   (let ((answer (get-buffer-window buf (or frame 0))))
     (if answer
 	(display-buffer buf nil (or frame 0)) ;Deiconify the frame if necessary.
