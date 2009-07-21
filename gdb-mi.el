@@ -1573,7 +1573,9 @@ is running."
     (gdb-running . "\\*running,\\(.*?\n\\)")
     (gdb-thread-created . "=thread-created,\\(.*?\n\\)")
     (gdb-thread-selected . "=thread-selected,\\(.*?\\)\n")
-    (gdb-thread-exited . "=thread-exited,\\(.*?\n\\)")))
+    (gdb-thread-exited . "=thread-exited,\\(.*?\n\\)")
+    (gdb-ignored-notification . "=[-[:alpha:]]+,?\\(.*?\\)\n")
+    (gdb-shell . "\\(\\(?:^.+\n\\)+\\)")))
 
 (defun gud-gdbmi-marker-filter (string)
   "Filter GDB/MI output."
@@ -1631,6 +1633,14 @@ is running."
     gdb-filter-output))
 
 (defun gdb-gdb (output-field))
+
+(defun gdb-shell (output-field)
+  (let ((gdb-output-sink gdb-output-sink))
+    (setq gdb-filter-output
+          (concat output-field gdb-filter-output))))
+
+(defun gdb-ignored-notification (output-field)
+  (message output-field))
 
 ;; gdb-invalidate-threads is defined to accept 'update-threads signal
 (defun gdb-thread-created (output-field))
