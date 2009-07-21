@@ -1104,6 +1104,11 @@ thread."
   "Get current stack frame object for thread of current buffer."
   (gdb-get-field (gdb-current-buffer-thread) 'frame))
 
+(defun gdb-buffer-type (buffer)
+  "Get value of `gdb-buffer-type' for BUFFER."
+  (with-current-buffer buffer
+    gdb-buffer-type))
+
 (defun gdb-get-buffer (buffer-type &optional thread)
   "Get a specific GDB buffer.
 
@@ -3437,6 +3442,23 @@ already, in which case that window is splitted first."
 	      answer)
 	  (set-window-buffer window buf)
 	  window)))))
+
+(defun gdb-preempt-existing-or-display-buffer (buf)
+  "Find window displaying a buffer with the same
+`gdb-buffer-type' as BUF and show BUF there. If no such window
+exists, just call `gdb-display-buffer' for BUF."
+  (if buf
+      (when (not (get-buffer-window buf))
+        (let* ((buf-type (gdb-buffer-type buf))
+               (existing-window
+                (get-window-with-predicate
+                 #'(lambda (w)
+                     (eq buf-type
+                         (gdb-buffer-type (window-buffer w)))))))
+          (if existing-window
+              (set-window-buffer existing-window buf)
+            (gdb-display-buffer buf t))))
+    (error "Null buffer")))
 
 
 ;;; Shared keymap initialization:
