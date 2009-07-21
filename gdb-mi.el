@@ -2894,7 +2894,7 @@ DOC is an optional documentation string."
 
 (def-gdb-auto-update-trigger gdb-invalidate-disassembly
   (let* ((frame (gdb-current-buffer-frame))
-         (file (gdb-get-field frame 'file))
+         (file (gdb-get-field frame 'fullname))
          (line (gdb-get-field frame 'line)))
     (when file
       (format "-data-disassemble -f %s -l %s -n -1 -- 0" file line)))
@@ -3042,7 +3042,7 @@ breakpoints buffer."
   (let ((breakpoint (get-text-property (point) 'gdb-breakpoint)))
     (if breakpoint
 	(let ((bptno (gdb-get-field breakpoint 'number))
-	      (file  (gdb-get-field breakpoint 'file))
+	      (file  (gdb-get-field breakpoint 'fullname))
 	      (line  (gdb-get-field breakpoint 'line)))
 	  (save-selected-window
 	    (let* ((buffer (find-file-noselect
