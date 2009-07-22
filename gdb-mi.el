@@ -1180,6 +1180,15 @@ DOC is an optional documentation string."
      (gdb-display-buffer
       (gdb-get-buffer-create ,buffer thread) t)))
 
+;; Used to display windows with thread-bound buffers
+(defmacro def-gdb-preempt-display-buffer (name buffer &optional doc split-horizontal)
+  `(defun ,name (&optional thread)
+     ,(when doc doc)
+     (message thread)
+     (gdb-preempt-existing-or-display-buffer
+      (gdb-get-buffer-create ,buffer thread)
+      ,split-horizontal)))
+
 ;; This assoc maps buffer type symbols to rules.  Each rule is a list of
 ;; at least one and possible more functions.  The functions have these
 ;; roles in defining a buffer type:
@@ -2391,22 +2400,22 @@ on the current line."
 
 (def-gdb-thread-buffer-simple-command
   gdb-display-stack-for-thread
-  gdb-display-stack-buffer
+  gdb-preemptively-display-stack-buffer
   "Display stack buffer for the thread at current line.")
 
 (def-gdb-thread-buffer-simple-command
   gdb-display-locals-for-thread
-  gdb-display-locals-buffer
+  gdb-preemptively-display-locals-buffer
   "Display locals buffer for the thread at current line.")
 
 (def-gdb-thread-buffer-simple-command
   gdb-display-registers-for-thread
-  gdb-display-registers-buffer
+  gdb-preemptively-display-registers-buffer
   "Display registers buffer for the thread at current line.")
 
 (def-gdb-thread-buffer-simple-command
   gdb-display-disassembly-for-thread
-  gdb-display-disassembly-buffer
+  gdb-preemptively-display-disassembly-buffer
   "Display disassembly buffer for the thread at current line.")
 
 (def-gdb-thread-buffer-simple-command
@@ -2892,6 +2901,10 @@ DOC is an optional documentation string."
  'gdb-disassembly-buffer
  "Display disassembly for current stack frame.")
 
+(def-gdb-preempt-display-buffer
+  gdb-preemptively-display-disassembly-buffer
+  'gdb-disassembly-buffer)
+
 (def-gdb-frame-for-buffer
  gdb-frame-disassembly-buffer
  'gdb-disassembly-buffer
@@ -3125,6 +3138,10 @@ member."
  'gdb-stack-buffer
  "Display backtrace of current stack.")
 
+(def-gdb-preempt-display-buffer
+  gdb-preemptively-display-stack-buffer
+  'gdb-stack-buffer nil t)
+
 (def-gdb-frame-for-buffer
  gdb-frame-stack-buffer
  'gdb-stack-buffer
@@ -3268,6 +3285,10 @@ member."
  'gdb-locals-buffer
  "Display local variables of current stack and their values.")
 
+(def-gdb-preempt-display-buffer
+ gdb-preemptively-display-locals-buffer
+ 'gdb-locals-buffer nil t)
+
 (def-gdb-frame-for-buffer
  gdb-frame-locals-buffer
  'gdb-locals-buffer
@@ -3327,6 +3348,10 @@ member."
  gdb-display-registers-buffer
  'gdb-registers-buffer
  "Display integer register contents.")
+
+(def-gdb-preempt-display-buffer
+  gdb-preemptively-display-registers-buffer
+ 'gdb-registers-buffer nil t)
 
 (def-gdb-frame-for-buffer
  gdb-frame-registers-buffer
@@ -3443,23 +3468,33 @@ already, in which case that window is splitted first."
 	  (set-window-buffer window buf)
 	  window)))))
 
-(defun gdb-preempt-existing-or-display-buffer (buf)
+(defun gdb-preempt-existing-or-display-buffer (buf &optional split-horizontal)
   "Find window displaying a buffer with the same
 `gdb-buffer-type' as BUF and show BUF there. If no such window
-exists, just call `gdb-display-buffer' for BUF."
+exists, just call `gdb-display-buffer' for BUF. If the window
+found is already dedicated, split window according to
+SPLIT-HORIZONTAL and show BUF in the new window."
   (if buf
       (when (not (get-buffer-window buf))
         (let* ((buf-type (gdb-buffer-type buf))
                (existing-window
                 (get-window-with-predicate
                  #'(lambda (w)
-                     (eq buf-type
-                         (gdb-buffer-type (window-buffer w)))))))
+                     (and (eq buf-type
+                              (gdb-buffer-type (window-buffer w)))
+                          (not (window-dedicated-p w)))))))
           (if existing-window
               (set-window-buffer existing-window buf)
-            (gdb-display-buffer buf t))))
+            (let ((dedicated-window
+                   (get-window-with-predicate
+                    #'(lambda (w)
+                        (eq buf-type
+                            (gdb-buffer-type (window-buffer w)))))))
+              (if dedicated-window
+                  (set-window-buffer 
+                   (split-window dedicated-window nil split-horizontal) buf)
+                (gdb-display-buffer buf t))))))
     (error "Null buffer")))
-
 
 ;;; Shared keymap initialization:
 
