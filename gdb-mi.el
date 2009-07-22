@@ -2346,7 +2346,7 @@ corresponding to the mode line clicked."
         (incf gdb-stopped-threads-count))
 
       (insert (gdb-get-field thread 'id))
-      (when gdb-verbose-thread-names
+      (when gdb-thread-buffer-verbose-names
         (insert " " (gdb-get-field thread 'target-id)))
       (insert " " (gdb-get-field thread 'state))
       ;; Include frame information for stopped threads
