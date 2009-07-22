@@ -2060,11 +2060,11 @@ HANDLER-NAME handler uses customization of CUSTOM-DEFUN. See
                  (add-text-properties (line-beginning-position)
                                       (line-end-position)
                                       '(mouse-face highlight
-                                                   help-echo "mouse-2, RET: visit breakpoint")))))
+                                       help-echo "mouse-2, RET: visit breakpoint")))))
       (add-text-properties (line-beginning-position)
                            (line-end-position)
                            `(gdb-breakpoint ,breakpoint))
-      (newline))
+      (insert "\n"))
     (gdb-place-breakpoints))))
 
 ;; Put breakpoint icons in relevant margins (even those set in the GUD buffer).
