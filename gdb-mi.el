@@ -2019,8 +2019,8 @@ HANDLER-NAME handler uses customization of CUSTOM-DEFUN. See
                  (insert 
                   (concat " in "
                           (propertize (gdb-get-field breakpoint 'func)
-                                      'face font-lock-function-name-face)))
-                 (gdb-insert-frame-location breakpoint)
+                                      'face font-lock-function-name-face))
+                  (gdb-frame-location breakpoint))
                  (add-text-properties (line-beginning-position)
                                       (line-end-position)
                                       '(mouse-face highlight
@@ -2220,28 +2220,6 @@ corresponding to the mode line clicked."
 ;; uses "-thread-info". Needs GDB 7.0 onwards.
 ;;; Threads view
 
-(defun gdb-jump-to (file line)
-  (find-file-other-window file)
-  (goto-line line))
-
-(define-button-type 'gdb-file-button
-  'help-echo "Push to jump to source code"
-;  'face 'bold
-  'action
-  (lambda (b)
-    (gdb-jump-to (button-get b 'file)
-                 (button-get b 'line))))
-
-(defun gdb-insert-file-location-button (file line)
-  "Insert text button which allows jumping to FILE:LINE.
-
-FILE is a full path."
-  (insert-text-button
-   (format "%s:%d" (file-name-nondirectory file) line)
-   :type 'gdb-file-button
-   'file file
-   'line line))
-
 (defun gdb-threads-buffer-name ()
   (concat "*threads of " (gdb-get-target-string) "*"))
 
@@ -2347,15 +2325,14 @@ FILE is a full path."
                                ,@(gdb-get-many-fields thread 'id 'target-id 'state))))
       ;; Include frame information for stopped threads
       (when (not running)
-        (insert (concat " in " (gdb-get-field thread 'frame 'func)))
-        (insert " (")
+        (insert " in " (gdb-get-field thread 'frame 'func) " (")
         (let ((args (gdb-get-field thread 'frame 'args)))
           (dolist (arg args)
             (insert (apply 'format `("%s=%s," ,@(gdb-get-many-fields arg 'name 'value)))))
           (when args (kill-backward-chars 1)))
-        (insert ")")
-        (gdb-insert-frame-location (gdb-get-field thread 'frame))
-        (insert (format " at %s" (gdb-get-field thread 'frame 'addr))))
+        (insert ")"
+                (gdb-frame-location (gdb-get-field thread 'frame))
+                " at " (gdb-get-field thread 'frame 'addr)))
       (add-text-properties (line-beginning-position)
                            (line-end-position)
                            `(gdb-thread ,thread))
@@ -3087,28 +3064,25 @@ breakpoints buffer."
  'gdb-frames-mode
  'gdb-invalidate-frames)
 
-(defun gdb-insert-frame-location (frame)
-  "Insert \"of file:line\" button or library name for structure FRAME.
+(defun gdb-frame-location (frame)
+  "Return \" of file:line\" or \" of library\" for structure FRAME.
 
 FRAME must have either \"file\" and \"line\" members or \"from\"
 member."
-  (let ((file (gdb-get-field frame 'fullname))
+  (let ((file (gdb-get-field frame 'file))
         (line (gdb-get-field frame 'line))
         (from (gdb-get-field frame 'from)))
-    (cond (file
-           ;; Filename with line number
-           (insert " of ")
-           (gdb-insert-file-location-button
-            file (string-to-number line)))
-          ;; Library
-          (from (insert (format " of %s" from))))))
+    (let ((res (or (and file line (concat file ":" line))
+                   from)))
+      (if res (concat " of " res) ""))))
 
 (defun gdb-stack-list-frames-custom ()
   (let* ((res (gdb-json-partial-output "frame"))
          (stack (gdb-get-field res 'stack)))
          (dolist (frame stack)
-           (insert (apply 'format `("%s in %s" ,@(gdb-get-many-fields frame 'level 'func))))
-           (gdb-insert-frame-location frame)
+           (insert
+            (apply 'format `("%s in %s" ,@(gdb-get-many-fields frame 'level 'func)))
+            (gdb-frame-location frame))
            (newline))
          (save-excursion
            (goto-char (point-min))
