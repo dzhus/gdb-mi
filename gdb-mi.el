@@ -2301,6 +2301,8 @@ corresponding to the mode line clicked."
     (define-key map "i" 'gdb-interrupt-thread)
     (define-key map "c" 'gdb-continue-thread)
     (define-key map "s" 'gdb-step-thread)
+    (define-key map [mouse-2] 'gdb-select-thread)
+    (define-key map [follow-link] 'mouse-face)
     map))
 
 (defmacro gdb-propertize-header (name buffer help-echo mouse-face face)
@@ -2375,14 +2377,17 @@ corresponding to the mode line clicked."
           (insert (gdb-frame-location (gdb-get-field thread 'frame))))
         (when gdb-thread-buffer-addresses
           (insert " at " (gdb-get-field thread 'frame 'addr))))
-      (add-text-properties (line-beginning-position)
-                           (line-end-position)
-                           `(gdb-thread ,thread))
       ;; We assume that gdb-thread-number is non-nil by this time
       (when (string-equal gdb-thread-number
                           (gdb-get-field thread 'id))
-        (set-marker gdb-thread-position (line-beginning-position))))
-      (newline))
+        (set-marker gdb-thread-position (line-beginning-position)))
+      (add-text-properties (line-beginning-position)
+                           (line-end-position)
+                           `(gdb-thread ,thread
+                             mouse-face highlight
+                             help-echo "mouse-2, RET: select thread"))
+      ;; We don't use newline to avoid inheriting of text property
+      (insert "\n")))
     ;; We update gud-running here because we need to make sure that
     ;; gdb-threads-list is up-to-date
     (gdb-update-gud-running)))
@@ -2393,7 +2398,7 @@ corresponding to the mode line clicked."
 CUSTOM-DEFUN may use locally bound `thread' variable, which will
 be the value of 'gdb-thread property of the current line. If
 'gdb-thread is nil, error is signaled."
-  `(defun ,name ()
+  `(defun ,name (&optional event)
      ,(when doc doc)
      (interactive)
      (save-excursion
