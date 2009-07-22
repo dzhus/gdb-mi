@@ -334,6 +334,30 @@ stopped thread is already selected."
   :group 'gdb
   :version "23.2")
 
+(defcustom gdb-thread-buffer-verbose-names t
+  "Show long thread names in threads buffer."
+  :type 'boolean
+  :group 'gdb
+  :version "23.2")
+
+(defcustom gdb-thread-buffer-arguments t
+  "Show function arguments in threads buffer."
+  :type 'boolean
+  :group 'gdb
+  :version "23.2")
+
+(defcustom gdb-thread-buffer-locations t
+  "Show file information or library names in threads buffer."
+  :type 'boolean
+  :group 'gdb
+  :version "23.2")
+
+(defcustom gdb-thread-buffer-addresses nil
+  "Show thread addresses in threads buffer."
+  :type 'boolean
+  :group 'gdb
+  :version "23.2")
+
 (defvar gdb-debug-log nil
   "List of commands sent to and replies received from GDB.
 Most recent commands are listed first.  This list stores only the last
@@ -2245,8 +2269,8 @@ corresponding to the mode line clicked."
  'gdb-invalidate-threads)
 
 (defvar gdb-threads-font-lock-keywords
-  '(("in \\([^ ]+\\) ("  (1 font-lock-function-name-face))
-    (" \\(stopped\\) in "  (1 font-lock-warning-face))
+  '(("in \\([^ ]+\\)"  (1 font-lock-function-name-face))
+    (" \\(stopped\\)"  (1 font-lock-warning-face))
     (" \\(running\\)"  (1 font-lock-string-face))
     ("\\(\\(\\sw\\|[_.]\\)+\\)="  (1 font-lock-variable-name-face)))
   "Font lock keywords used in `gdb-threads-mode'.")
@@ -2321,18 +2345,24 @@ corresponding to the mode line clicked."
           (incf gdb-running-threads-count)
         (incf gdb-stopped-threads-count))
 
-      (insert (apply 'format `("%s (%s) %s"
-                               ,@(gdb-get-many-fields thread 'id 'target-id 'state))))
+      (insert (gdb-get-field thread 'id))
+      (when gdb-verbose-thread-names
+        (insert " " (gdb-get-field thread 'target-id)))
+      (insert " " (gdb-get-field thread 'state))
       ;; Include frame information for stopped threads
       (when (not running)
-        (insert " in " (gdb-get-field thread 'frame 'func) " (")
-        (let ((args (gdb-get-field thread 'frame 'args)))
-          (dolist (arg args)
-            (insert (apply 'format `("%s=%s," ,@(gdb-get-many-fields arg 'name 'value)))))
-          (when args (kill-backward-chars 1)))
-        (insert ")"
-                (gdb-frame-location (gdb-get-field thread 'frame))
-                " at " (gdb-get-field thread 'frame 'addr)))
+        (insert " in " (gdb-get-field thread 'frame 'func))
+        (when gdb-thread-buffer-arguments
+          (insert " (")
+          (let ((args (gdb-get-field thread 'frame 'args)))
+            (dolist (arg args)
+              (insert (apply 'format `("%s=%s," ,@(gdb-get-many-fields arg 'name 'value)))))
+            (when args (kill-backward-chars 1)))
+          (insert ")"))
+        (when gdb-thread-buffer-locations
+          (insert (gdb-frame-location (gdb-get-field thread 'frame))))
+        (when gdb-thread-buffer-addresses
+          (insert " at " (gdb-get-field thread 'frame 'addr))))
       (add-text-properties (line-beginning-position)
                            (line-end-position)
                            `(gdb-thread ,thread))
