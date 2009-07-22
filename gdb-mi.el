@@ -334,6 +334,18 @@ stopped thread is already selected."
   :group 'gdb
   :version "23.2")
 
+(defcustom gdb-stack-buffer-locations t
+  "Show file information or library names in stack buffers."
+  :type 'boolean
+  :group 'gdb
+  :version "23.2")
+
+(defcustom gdb-stack-buffer-addresses nil
+  "Show frame addresses in stack buffers."
+  :type 'boolean
+  :group 'gdb
+  :version "23.2")
+
 (defcustom gdb-thread-buffer-verbose-names t
   "Show long thread names in threads buffer."
   :type 'boolean
@@ -353,7 +365,7 @@ stopped thread is already selected."
   :version "23.2")
 
 (defcustom gdb-thread-buffer-addresses nil
-  "Show thread addresses in threads buffer."
+  "Show addresses for thread frames in threads buffer."
   :type 'boolean
   :group 'gdb
   :version "23.2")
@@ -3111,8 +3123,11 @@ member."
          (stack (gdb-get-field res 'stack)))
          (dolist (frame stack)
            (insert
-            (apply 'format `("%s in %s" ,@(gdb-get-many-fields frame 'level 'func)))
-            (gdb-frame-location frame))
+            (apply 'format `("%s in %s" ,@(gdb-get-many-fields frame 'level 'func))))
+           (when gdb-stack-buffer-locations
+             (insert (gdb-frame-location frame)))
+           (when gdb-stack-buffer-addresses
+             (insert " at " (gdb-get-field frame 'addr)))
            (newline))
          (save-excursion
            (goto-char (point-min))
@@ -3161,7 +3176,7 @@ member."
     map))
 
 (defvar gdb-frames-font-lock-keywords
-  '(("in \\([^ ]+\\) of "  (1 font-lock-function-name-face)))
+  '(("in \\([^ ]+\\)"  (1 font-lock-function-name-face)))
   "Font lock keywords used in `gdb-frames-mode'.")
 
 (define-derived-mode gdb-frames-mode gdb-parent-mode "Frames"
