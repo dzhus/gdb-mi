@@ -168,9 +168,10 @@
   Too many windows appear now. It should be possible to preempt
   visible buffer of some specific type with the same buffer for
   another thread. gdb-get-buffer-by-type should be written for this.
-* TODO Improve gdb-jump-to                                               :ui:
+* DONE Improve gdb-jump-to                                               :ui:
+  CLOSED: [2009-07-22 Срд 22:41]
   See also gud-display-line for implementation ideas
-
+  We don't need it at all.
 * TODO Rewrite gdb-place-breakpoints                                :cleanup:
   
 * GDB                                                                   :GDB:
