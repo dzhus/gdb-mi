@@ -1131,6 +1131,8 @@ INDENT is the current indentation depth."
   (nth 3 rules-entry))
 
 (defun gdb-update-buffer-name ()
+  "Rename current buffer according to name-maker associated with
+it in `gdb-buffer-rules'."
   (let ((f (gdb-rules-name-maker (assoc gdb-buffer-type
                                         gdb-buffer-rules))))
     (when f (rename-buffer (funcall f)))))
@@ -1178,17 +1180,19 @@ buffer-local variable of the new buffer.
 If buffer's mode returns a symbol, it's used to register "
   (or (gdb-get-buffer buffer-type thread)
       (let ((rules (assoc buffer-type gdb-buffer-rules))
-	     (new (generate-new-buffer "limbo")))
+            (new (generate-new-buffer "limbo")))
 	(with-current-buffer new
-	  (let ((mode (gdb-rules-buffer-mode rules)))
-	    (when mode (funcall mode))
-	    (setq gdb-buffer-type buffer-type)
-            (when thread
-              (set (make-local-variable 'gdb-thread-number) thread))
-	    (set (make-local-variable 'gud-minor-mode)
+          (let ((mode (gdb-rules-buffer-mode rules)))
+            (when mode (funcall mode)))
+          (setq gdb-buffer-type buffer-type)
+          (set (make-local-variable 'gud-minor-mode)
 		 (buffer-local-value 'gud-minor-mode gud-comint-buffer))
-	    (set (make-local-variable 'tool-bar-map) gud-tool-bar-map)
-            (current-buffer))))))
+          (set (make-local-variable 'tool-bar-map) gud-tool-bar-map)
+          (when thread
+            (set (make-local-variable 'gdb-thread-number) thread))
+          ;; Call name maker from buffer rules
+          (gdb-update-buffer-name)
+          (current-buffer)))))
 
 (defun gdb-bind-function-to-buffer (expr buffer)
   "Return a function which will evaluate EXPR in BUFFER."
@@ -1253,8 +1257,6 @@ DOC is an optional documentation string."
   (setq buffer-read-only t)
   (buffer-disable-undo)
   (let ((rules (gdb-current-buffer-rules)))
-    ;; Call name maker from buffer rules
-    (rename-buffer (funcall (gdb-rules-name-maker rules)))
     ;; Subscribe buffer to update notifications if there's an updating trigger associated with 
     (let ((trigger (gdb-rules-update-trigger rules)))
       (when trigger
