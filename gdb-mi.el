@@ -204,6 +204,12 @@ Emacs can't find.")
 This variable is updated in `gdb-done-or-error' and returned by
 `gud-gdbmi-marker-filter'.")
 
+(defvar gdb-non-stop nil
+  "Indicates whether current GDB session is using non-stop mode.
+
+It is initialized to `gdb-non-stop-setting' at the beginning of
+every GDB session.")
+
 (defvar gdb-buffer-type nil
   "One of the symbols bound in `gdb-buffer-rules'.")
 (make-variable-buffer-local 'gdb-buffer-type)
@@ -255,9 +261,12 @@ This function checks `gdb-pending-triggers' value every
 		 (const   :tag "Unlimited" nil))
   :version "22.1")
 
-(defcustom gdb-non-stop t
+(defcustom gdb-non-stop-setting t
   "When in non-stop mode, stopped threads can be examined while
-other threads continue to execute."
+other threads continue to execute.
+
+GDB session needs to be restarted for this setting to take
+effect."
   :type 'boolean
   :group 'gdb
   :version "23.2")
@@ -689,7 +698,8 @@ detailed description of this mode.
 	gdb-continuation nil
         gdb-buf-publisher '()
         gdb-threads-list '()
-        gdb-breakpoints-list '())
+        gdb-breakpoints-list '()
+        gdb-non-stop gdb-non-stop-setting)
   ;;
   (setq gdb-buffer-type 'gdbmi)
   ;;

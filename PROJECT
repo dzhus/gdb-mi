@@ -77,8 +77,16 @@
    Setting gdb-non-stop in the menu does not immediately change GDB
    mode — user should be notified about the need to restart gdb
    session.
+** TODO Fallback to all-stop when non-stop is unavaliable                :ui:
+   [[gnus:gmane.emacs.devel#jwvprbwb57t.fsf-monnier%2Bemacs@gnu.org][Email from Stefan Monnier: Re: Emacs and external program]]
 
+   
+** DONE User should not be allowed to change gdb-non-stop during debug
+   CLOSED: [2009-07-23 Чтв 16:36]
 
+   We achieve this by separating gdb-non-stop-setting and
+   gdb-non-stop.
+   
 * DONE [#A] Proper =thread-selected handler                         :threads:
   CLOSED: [2009-07-19 Вск 13:43]
   Type `thread N` in GUD buffer and you'll get outdated information
@@ -130,7 +138,7 @@
 ** TODO Disassemble function around point                               :new:
 
 ** TODO Show main when program is not running
-
+   
 * Memory buffer
 ** TODO Show function name instead of just address                   :ui:GDB:
    
