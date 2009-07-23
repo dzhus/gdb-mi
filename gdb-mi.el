@@ -1170,7 +1170,8 @@ If buffer's mode returns a symbol, it's used to register "
       (let ((rules (assoc buffer-type gdb-buffer-rules))
 	     (new (generate-new-buffer "limbo")))
 	(with-current-buffer new
-	  (let ((mode (gdb-rules-buffer-mode rules)))
+	  (let ((mode (gdb-rules-buffer-mode rules))
+                (trigger (gdb-rules-update-trigger rules)))
 	    (when mode (funcall mode))
 	    (setq gdb-buffer-type buffer-type)
             (when thread
@@ -1178,6 +1179,12 @@ If buffer's mode returns a symbol, it's used to register "
 	    (set (make-local-variable 'gud-minor-mode)
 		 (buffer-local-value 'gud-minor-mode gud-comint-buffer))
 	    (set (make-local-variable 'tool-bar-map) gud-tool-bar-map)
+            (rename-buffer (funcall (gdb-rules-name-maker rules)))
+	    (when trigger
+              (gdb-add-subscriber gdb-buf-publisher
+                                  (cons (current-buffer)
+                                        (gdb-bind-function-to-buffer trigger (current-buffer))))
+              (funcall trigger))
             (current-buffer))))))
 
 (defun gdb-bind-function-to-buffer (expr buffer)
@@ -1242,16 +1249,6 @@ DOC is an optional documentation string."
   (kill-all-local-variables)
   (setq buffer-read-only t)
   (buffer-disable-undo)
-  (let ((rules (gdb-current-buffer-rules)))
-    ;; Call name maker from buffer rules
-    (rename-buffer (funcall (gdb-rules-name-maker rules)))
-    ;; Subscribe buffer to update notifications if there's an updating trigger associated with 
-    (let ((trigger (gdb-rules-update-trigger rules)))
-      (when trigger
-        (gdb-add-subscriber gdb-buf-publisher
-                            (cons (current-buffer)
-                                  (gdb-bind-function-to-buffer trigger (current-buffer))))
-        (funcall trigger))))
   ;; Delete buffer from gdb-buf-publisher when it's killed
   ;; (if it has an associated update trigger)
   (add-hook 
