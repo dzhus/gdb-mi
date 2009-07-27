@@ -2413,6 +2413,7 @@ be the value of 'gdb-thread property of the current line. If
   `(defun ,name (&optional event)
      ,(when doc doc)
      (interactive)
+     (if event (posn-set-point (event-end event)))
      (save-excursion
        (beginning-of-line)
        (let ((thread (get-text-property (point) 'gdb-thread)))
