@@ -73,7 +73,8 @@
    gud-stop-subjob calls comint-stop-subjob. Certainly we'd like to
    stop program execution with one big button.
 
-** IN PROGRESS Menu options clarification                                :ui:
+** DONE Menu options clarification                                       :ui:
+   CLOSED: [2009-07-27 Пнд 23:34]
    Setting gdb-non-stop in the menu does not immediately change GDB
    mode — user should be notified about the need to restart gdb
    session.
@@ -100,9 +101,13 @@
   Solution is `gdb-wait-for-pending` macro: it guarantees that its
   body will get executed when `gdb-pending-triggers` is empty.
 
-* TODO [#A] Improve multi-thread UI                                 :threads:
+* IN PROGRESS [#A] Improve multi-thread UI                          :threads:
   Thread-bound buffers produce just a big mess. When observing several
   threads, information should be presented in a more usable way.
+
+  Currently we try not to break the whole window layout by using
+  `gdb-preempt-existing-or-display-buffer` function to display
+  thread-bound buffers.
   
   Ideas:
   
@@ -119,6 +124,9 @@
   Kill buffers which are bound to threads which already exited. This
   can be done by handling =thread-exited notification.
 
+  100 threads exit quickly and we're roasted. Better provide
+  `gdb-cleanup-buffer` function which can be called manually.
+  
 * TODO [#B] Make sure that threads list handler is executed first
   Currently we can kill thread list buffer so when it's resurrected in
   `gdb-update`, it goes to the end of `gdb-buf-publisher` list. As the
