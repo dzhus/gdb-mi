@@ -5,11 +5,9 @@
 ;; Keywords: unix, tools
 
 ;; Copyright (C) 1992, 1993, 1994, 1995, 1996, 1998, 2000, 2001, 2002, 2003,
-;;  2004, 2005, 2006, 2007, 2008 Free Software Foundation, Inc.
+;;  2004, 2005, 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
 
-;; This file will become part of GNU Emacs.
-;; Version 0.5 from ELPA archive.
-;; Use with gdb-mi.el from the same archive.
+;; This file is part of GNU Emacs.
 
 ;; GNU Emacs is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -138,9 +136,14 @@ Used to grey out relevant toolbar icons.")
 (defun gud-stop-subjob ()
   (interactive)
   (with-current-buffer gud-comint-buffer
-    (if (string-equal gud-target-name "emacs")
-	(comint-stop-subjob)
-      (comint-interrupt-subjob))))
+    (cond ((string-equal gud-target-name "emacs")
+           (comint-stop-subjob))
+          ((eq gud-minor-mode 'jdb)
+           (gud-call "suspend"))
+          ((eq gud-minor-mode 'gdbmi)
+           (gdb-gud-context-call "-exec-interrupt" nil nil t))
+          (t 
+           (comint-interrupt-subjob)))))
 
 (easy-mmode-defmap gud-menu-map
   '(([help]     "Info (debugger)" . gud-goto-info)
@@ -156,12 +159,22 @@ Used to grey out relevant toolbar icons.")
                   :enable (not gud-running)
 		  :visible (memq gud-minor-mode '(gdbmi gdb dbx jdb)))
     ([go]	menu-item (if gdb-active-process "Continue" "Run") gud-go
-		  :visible (and (not gud-running)
-				(eq gud-minor-mode 'gdbmi)))
+		  :visible (and (eq gud-minor-mode 'gdbmi)
+                                (or (and (or
+                                          (not gdb-gud-control-all-threads)
+                                          (not gdb-non-stop))
+                                         (not gud-running))
+                                    (and gdb-gud-control-all-threads
+                                         (> gdb-stopped-threads-count 0)))))
     ([stop]	menu-item "Stop" gud-stop-subjob
 		  :visible (or (not (memq gud-minor-mode '(gdbmi pdb)))
-			       (and gud-running
-				    (eq gud-minor-mode 'gdbmi))))
+			       (and (eq gud-minor-mode 'gdbmi)
+                                    (or (and (or
+                                              (not gdb-gud-control-all-threads)
+                                              (not gdb-non-stop))
+                                             gud-running)
+                                        (and gdb-gud-control-all-threads
+                                             (> gdb-running-threads-count 0))))))
     ([until]	menu-item "Continue to selection" gud-until
                   :enable (not gud-running)
 		  :visible (and (memq gud-minor-mode '(gdbmi gdb perldb))
@@ -248,11 +261,22 @@ Used to grey out relevant toolbar icons.")
 	:visible (memq gud-minor-mode '(gdbmi gdb dbx jdb)))
        ([menu-bar go] menu-item
 	,(propertize " go " 'face 'font-lock-doc-face) gud-go
-	:visible (and (not gud-running)
-		      (eq gud-minor-mode 'gdbmi)))
+	:visible (and (eq gud-minor-mode 'gdbmi)
+                      (or (and (or
+                                (not gdb-gud-control-all-threads)
+                                (not gdb-non-stop))
+                               (not gud-running))
+                          (and gdb-gud-control-all-threads
+                               (> gdb-stopped-threads-count 0)))))
        ([menu-bar stop] menu-item
 	,(propertize "stop" 'face 'font-lock-doc-face) gud-stop-subjob
-	:visible (or gud-running
+	:visible (or (and (eq gud-minor-mode 'gdbmi)
+                          (or (and (or
+                                    (not gdb-gud-control-all-threads)
+                                    (not gdb-non-stop))
+                                   gud-running)
+                              (and gdb-gud-control-all-threads
+                                   (> gdb-running-threads-count 0))))
 		     (not (eq gud-minor-mode 'gdbmi))))
        ([menu-bar print]
 	. (,(propertize "print" 'face 'font-lock-doc-face) . gud-print))
@@ -273,30 +297,29 @@ Used to grey out relevant toolbar icons.")
   "`gud-mode' keymap.")
 
 (defvar gud-tool-bar-map
-  (if (display-graphic-p)
-      (let ((map (make-sparse-keymap)))
-	(dolist (x '((gud-break . "gud/break")
-		     (gud-remove . "gud/remove")
-		     (gud-print . "gud/print")
-		     (gud-pstar . "gud/pstar")
-		     (gud-pp . "gud/pp")
-		     (gud-watch . "gud/watch")
-		     (gud-run . "gud/run")
-		     (gud-go . "gud/go")
-		     (gud-stop-subjob . "gud/stop")
-		     (gud-cont . "gud/cont")
-		     (gud-until . "gud/until")
-		     (gud-next . "gud/next")
-		     (gud-step . "gud/step")
-		     (gud-finish . "gud/finish")
-		     (gud-nexti . "gud/nexti")
-		     (gud-stepi . "gud/stepi")
-		     (gud-up . "gud/up")
-		     (gud-down . "gud/down")
-		     (gud-goto-info . "info"))
-		   map)
-	  (tool-bar-local-item-from-menu
-	   (car x) (cdr x) map gud-minor-mode-map)))))
+  (let ((map (make-sparse-keymap)))
+    (dolist (x '((gud-break . "gud/break")
+		 (gud-remove . "gud/remove")
+		 (gud-print . "gud/print")
+		 (gud-pstar . "gud/pstar")
+		 (gud-pp . "gud/pp")
+		 (gud-watch . "gud/watch")
+		 (gud-run . "gud/run")
+		 (gud-go . "gud/go")
+		 (gud-stop-subjob . "gud/stop")
+		 (gud-cont . "gud/cont")
+		 (gud-until . "gud/until")
+		 (gud-next . "gud/next")
+		 (gud-step . "gud/step")
+		 (gud-finish . "gud/finish")
+		 (gud-nexti . "gud/nexti")
+		 (gud-stepi . "gud/stepi")
+		 (gud-up . "gud/up")
+		 (gud-down . "gud/down")
+		 (gud-goto-info . "info"))
+	       map)
+      (tool-bar-local-item-from-menu
+       (car x) (cdr x) map gud-minor-mode-map))))
 
 (defun gud-file-name (f)
   "Transform a relative file name to an absolute file name.
@@ -378,9 +401,10 @@ we're in the GUD buffer)."
      (defun ,func (arg)
        ,@(if doc (list doc))
        (interactive "p")
-       ,(if (stringp cmd)
-	    `(gud-call ,cmd arg)
-	  cmd))
+       (if (not gud-running)
+	 ,(if (stringp cmd)
+	      `(gud-call ,cmd arg)
+	    cmd)))
      ,(if key `(local-set-key ,(concat "\C-c" key) ',func))
      ,(if key `(global-set-key (vconcat gud-key-prefix ,key) ',func))))
 
@@ -764,6 +788,7 @@ directory and source-file directory for your debugger."
   (setq comint-prompt-regexp "^(.*gdb[+]?) *")
   (setq paragraph-start comint-prompt-regexp)
   (setq gdb-first-prompt t)
+  (setq gud-running nil)
   (setq gud-filter-pending-text nil)
   (run-hooks 'gud-gdb-mode-hook))
 
@@ -2445,6 +2470,9 @@ comint mode, which see."
   :group 'gud
   :type 'boolean)
 
+(declare-function tramp-file-name-localname "tramp" (vec))
+(declare-function tramp-dissect-file-name "tramp" (name &optional nodefault))
+
 ;; Perform initializations common to all debuggers.
 ;; The first arg is the specified command line,
 ;; which starts with the program to debug.
@@ -2502,7 +2530,9 @@ comint mode, which see."
       (if w
  	  (setcar w
  		  (if (file-remote-p default-directory)
- 		      (setq file (file-name-nondirectory file))
+		      ;; Tramp has already been loaded if we are here.
+		      (setq file (tramp-file-name-localname
+				  (tramp-dissect-file-name file)))
  		    file))))
     (apply 'make-comint (concat "gud" filepart) program nil
 	   (if massage-args (funcall massage-args file args) args))
@@ -3235,6 +3265,7 @@ Treats actions as defuns."
 
 ;;; Customizable settings
 
+;;;###autoload
 (define-minor-mode gud-tooltip-mode
   "Toggle the display of GUD tooltips."
   :global t
@@ -3245,11 +3276,11 @@ Treats actions as defuns."
       (progn
 	(add-hook 'change-major-mode-hook 'gud-tooltip-change-major-mode)
 	(add-hook 'pre-command-hook 'tooltip-hide)
-	(add-hook 'tooltip-hook 'gud-tooltip-tips)
+	(add-hook 'tooltip-functions 'gud-tooltip-tips)
 	(define-key global-map [mouse-movement] 'gud-tooltip-mouse-motion))
     (unless tooltip-mode (remove-hook 'pre-command-hook 'tooltip-hide)
     (remove-hook 'change-major-mode-hook 'gud-tooltip-change-major-mode)
-    (remove-hook 'tooltip-hook 'gud-tooltip-tips)
+    (remove-hook 'tooltip-functions 'gud-tooltip-tips)
     (define-key global-map [mouse-movement] 'ignore)))
   (gud-tooltip-activate-mouse-motions-if-enabled)
   (if (and gud-comint-buffer
@@ -3402,6 +3433,7 @@ With arg, dereference expr if ARG is positive, otherwise do not derereference."
 	((xdb pdb) (concat "p " expr))
 	(sdb (concat expr "/"))))
 
+(declare-function gdb-input "gdb-mi" (item))
 (declare-function tooltip-expr-to-print "tooltip" (event))
 (declare-function tooltip-event-buffer "tooltip" (event))
 
