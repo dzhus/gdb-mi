@@ -1935,10 +1935,8 @@ FIX-KEY and FIX-KEY work as in `gdb-jsonify-buffer'."
   (format (concat "%" (number-to-string padding) "s") string))
 
 (defstruct 
-  (gdb-table
-   (:constructor gdb-new-table (column-count)))
-  (column-count 0 :read-only t)
-  (column-sizes (make-list column-count 0))
+  gdb-table
+  (column-sizes nil)
   (rows nil)
   (row-properties nil)
   (right-align nil))
@@ -1952,6 +1950,9 @@ calling `gdb-table-string'."
         (row-properties (gdb-table-row-properties table))
         (column-sizes (gdb-table-column-sizes table))
         (right-align (gdb-table-right-align table)))
+    (when (not column-sizes)
+      (setf (gdb-table-column-sizes table)
+            (make-list (length row) 0)))
     (setf (gdb-table-rows table)
           (append rows (list row)))
     (setf (gdb-table-row-properties table)
@@ -1961,7 +1962,7 @@ calling `gdb-table-string'."
                      (let ((new-x
                             (max (abs x) (string-width s))))
                        (if right-align new-x (- new-x))))
-                   column-sizes
+                   (gdb-table-column-sizes table)
                    row))
     ;; Avoid trailing whitespace at eol
     (if (not (gdb-table-right-align table))
@@ -2083,7 +2084,7 @@ HANDLER-NAME handler uses customization of CUSTOM-DEFUN. See
   (let ((breakpoints-list (gdb-get-field 
                            (gdb-json-partial-output "bkpt" "script")
                            'BreakpointTable 'body))
-        (table (gdb-new-table 7)))
+        (table (make-gdb-table)))
     (setq gdb-breakpoints-list nil)
     (gdb-table-add-row table '("Num" "Type" "Disp" "Enb" "Hits" "Addr" "What"))
     (dolist (breakpoint breakpoints-list)
@@ -3174,22 +3175,25 @@ member."
       (if res (concat " of " res) ""))))
 
 (defun gdb-stack-list-frames-custom ()
-  (let* ((res (gdb-json-partial-output "frame"))
-         (stack (gdb-get-field res 'stack)))
+  (let ((stack (gdb-get-field (gdb-json-partial-output "frame") 'stack))
+        (table (make-gdb-table)))
          (dolist (frame stack)
-           (insert
-            (apply 'format `("%s in %s" ,@(gdb-get-many-fields frame 'level 'func))))
-           (when gdb-stack-buffer-locations
-             (insert (gdb-frame-location frame)))
-           (when gdb-stack-buffer-addresses
-             (insert " at " (gdb-get-field frame 'addr)))
-           (newline))
+           (gdb-table-add-row table
+            (list
+             (gdb-get-field frame 'level)
+             "in"
+             (concat
+              (gdb-get-field frame 'func)
+              (if gdb-stack-buffer-locations 
+                  (gdb-frame-location frame) "")
+              (if gdb-stack-buffer-addresses 
+                  (concat " at " (gdb-get-field frame 'addr)) "")))
+            '(mouse-face highlight
+              help-echo "mouse-2, RET: Select frame")))
+         (insert (gdb-table-string table " "))
          (save-excursion
            (goto-char (point-min))
            (while (< (point) (point-max))
-             (add-text-properties (point-at-bol) (1+ (point-at-bol))
-                                  '(mouse-face highlight
-                                               help-echo "mouse-2, RET: Select frame"))
              (beginning-of-line)
              (when (and (looking-at "^[0-9]+\\s-+\\S-+\\s-+\\(\\S-+\\)")
                         (equal (match-string 1) gdb-selected-frame))
@@ -3304,7 +3308,7 @@ member."
 ;; These can be expanded using gud-watch.
 (defun gdb-locals-handler-custom ()
   (let ((locals-list (gdb-get-field (gdb-json-partial-output) 'locals))
-        (table (gdb-new-table 5)))
+        (table (make-gdb-table)))
     (dolist (local locals-list)
       (let ((name (gdb-get-field local 'name))
             (value (gdb-get-field local 'value))
@@ -3390,7 +3394,7 @@ member."
 (defun gdb-registers-handler-custom ()
   (let ((register-values (gdb-get-field (gdb-json-partial-output) 'register-values))
         (register-names-list (reverse gdb-register-names))
-        (table (gdb-new-table 2)))
+        (table (make-gdb-table)))
     (dolist (register register-values)
       (let* ((register-number (gdb-get-field register 'number))
              (value (gdb-get-field register 'value))
