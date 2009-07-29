@@ -473,15 +473,6 @@ the list) is deleted every time a new one is added (at the front)."
 	(setq varnumlet (concat varnumlet "." component)))
       expr)))
 
-(defvar gdb-locals-font-lock-keywords
-  '(
-    ;; var = type value
-    ( "\\(^\\(\\sw\\|[_.]\\)+\\)\t+\\(\\(\\sw\\|[_.]\\)+\\)"
-      (1 font-lock-variable-name-face)
-      (3 font-lock-type-face))
-    )
-  "Font lock keywords used in `gdb-local-mode'.")
-
 ;; noall is used for commands which don't take --all, but only
 ;; --thread.
 (defun gdb-gud-context-command (command &optional noall)
@@ -1943,6 +1934,57 @@ FIX-KEY and FIX-KEY work as in `gdb-jsonify-buffer'."
 (defun gdb-pad-string (string padding)
   (format (concat "%" (number-to-string padding) "s") string))
 
+(defstruct 
+  (gdb-table
+   (:constructor gdb-new-table (column-count)))
+  (column-count 0 :read-only t)
+  (column-sizes (make-list column-count 0))
+  (rows nil)
+  (row-properties nil)
+  (right-align nil))
+
+(defun gdb-table-add-row (table row &optional properties)
+  "Add ROW of string to TABLE and recalculate column sizes.
+
+When non-nil, PROPERTIES will be added to the whole row when
+calling `gdb-table-string'."
+  (let ((rows (gdb-table-rows table))
+        (row-properties (gdb-table-row-properties table))
+        (column-sizes (gdb-table-column-sizes table))
+        (right-align (gdb-table-right-align table)))
+    (setf (gdb-table-rows table)
+          (append rows (list row)))
+    (setf (gdb-table-row-properties table)
+          (append row-properties (list properties)))
+    (setf (gdb-table-column-sizes table)
+          (mapcar* (lambda (x s)
+                     (let ((new-x
+                            (max (abs x) (string-width s))))
+                       (if right-align new-x (- new-x))))
+                   column-sizes
+                   row))
+    ;; Avoid trailing whitespace at eol
+    (if (not (gdb-table-right-align table))
+        (setcar (last (gdb-table-column-sizes table)) 0))))
+
+(defun gdb-table-string (table &optional sep)
+  "Return TABLE as a string with columns separated with SEP."
+  (let ((column-sizes (gdb-table-column-sizes table))
+        (res ""))
+    (mapconcat
+     'identity
+     (mapcar*
+      (lambda (row properties)
+        (apply 'propertize
+               (mapconcat 'identity
+                          (mapcar* (lambda (s x) (gdb-pad-string s x))
+                                   row column-sizes)
+                          sep)
+               properties))
+      (gdb-table-rows table)
+      (gdb-table-row-properties table))
+     "\n")))
+
 (defalias 'gdb-get-field 'bindat-get-field)
 
 (defun gdb-get-many-fields (struct &rest fields)
@@ -2040,44 +2082,39 @@ HANDLER-NAME handler uses customization of CUSTOM-DEFUN. See
 (defun gdb-breakpoints-list-handler-custom ()
   (let ((breakpoints-list (gdb-get-field 
                            (gdb-json-partial-output "bkpt" "script")
-                           'BreakpointTable 'body)))
+                           'BreakpointTable 'body))
+        (table (gdb-new-table 7)))
     (setq gdb-breakpoints-list nil)
-    (insert "Num\tType\t\tDisp\tEnb\tHits\tAddr       What\n")
+    (gdb-table-add-row table '("Num" "Type" "Disp" "Enb" "Hits" "Addr" "What"))
     (dolist (breakpoint breakpoints-list)
       (add-to-list 'gdb-breakpoints-list 
                    (cons (gdb-get-field breakpoint 'number)
                          breakpoint))
-      (insert
-       (concat
-        (gdb-get-field breakpoint 'number) "\t"
-        (gdb-get-field breakpoint 'type) "\t"
-        (gdb-get-field breakpoint 'disp) "\t"
+      (let ((at (gdb-get-field breakpoint 'at))
+            (pending (gdb-get-field breakpoint 'pending))
+            (func (gdb-get-field breakpoint 'func)))
+      (gdb-table-add-row table
+       (list
+        (gdb-get-field breakpoint 'number)
+        (gdb-get-field breakpoint 'type)
+        (gdb-get-field breakpoint 'disp)
         (let ((flag (gdb-get-field breakpoint 'enabled)))
           (if (string-equal flag "y")
               (propertize "y" 'face  font-lock-warning-face)
-            (propertize "n" 'face  font-lock-comment-face))) "\t"
-        (gdb-get-field breakpoint 'times) "\t"
-        (gdb-get-field breakpoint 'addr)))
-      (let ((at (gdb-get-field breakpoint 'at))
-            (pending (gdb-get-field breakpoint 'pending)))
-        (cond (pending (insert "  " pending))
-              (at (insert " " at))
-              (t
-               (progn
-                 (insert 
-                  (concat " in "
-                          (propertize (gdb-get-field breakpoint 'func)
-                                      'face font-lock-function-name-face))
-                  (gdb-frame-location breakpoint))
-                 (add-text-properties (line-beginning-position)
-                                      (line-end-position)
-                                      '(mouse-face highlight
-                                       help-echo "mouse-2, RET: visit breakpoint")))))
-      (add-text-properties (line-beginning-position)
-                           (line-end-position)
-                           `(gdb-breakpoint ,breakpoint))
-      (insert "\n"))
-    (gdb-place-breakpoints))))
+            (propertize "n" 'face  font-lock-comment-face)))
+        (gdb-get-field breakpoint 'times)
+        (gdb-get-field breakpoint 'addr)
+          (or pending at
+              (concat "in "
+                      (propertize func 'face font-lock-function-name-face)
+                      (gdb-frame-location breakpoint))))
+       ;; Add clickable properties only for breakpoints with file:line
+       ;; information
+       (append (list 'gdb-breakpoint breakpoint)
+               (when func '(help-echo "mouse-2, RET: visit breakpoint"
+                            mouse-face highlight))))))
+    (insert (gdb-table-string table " "))
+    (gdb-place-breakpoints)))
 
 ;; Put breakpoint icons in relevant margins (even those set in the GUD buffer).
 (defun gdb-place-breakpoints ()
@@ -3266,7 +3303,8 @@ member."
 ;; Dont display values of arrays or structures.
 ;; These can be expanded using gud-watch.
 (defun gdb-locals-handler-custom ()
-  (let ((locals-list (gdb-get-field (gdb-json-partial-output) 'locals)))
+  (let ((locals-list (gdb-get-field (gdb-json-partial-output) 'locals))
+        (table (gdb-new-table 5)))
     (dolist (local locals-list)
       (let ((name (gdb-get-field local 'name))
             (value (gdb-get-field local 'value))
@@ -3282,10 +3320,15 @@ member."
                                `(mouse-face highlight
 			        help-echo "mouse-2: edit value"
 			        local-map ,gdb-edit-locals-map-1)
-			      value))
-		       (insert
-			(concat name "\t" type
-				"\t" value "\n"))))
+                               value))
+        (gdb-table-add-row 
+         table 
+         (list
+          (propertize type 'face font-lock-type-face)
+          (propertize name 'face font-lock-variable-name-face)
+          value)
+         '(mouse-face highlight))))
+    (insert (gdb-table-string table " "))
     (setq mode-name
           (concat "Locals: " (gdb-get-field (gdb-current-buffer-frame) 'func)))))
 
@@ -3308,8 +3351,6 @@ member."
 
 \\{gdb-locals-mode-map}"
   (setq header-line-format gdb-locals-header)
-  (set (make-local-variable 'font-lock-defaults)
-       '(gdb-locals-font-lock-keywords))
   (run-mode-hooks 'gdb-locals-mode-hook)
   'gdb-invalidate-locals)
 
@@ -3348,20 +3389,22 @@ member."
 
 (defun gdb-registers-handler-custom ()
   (let ((register-values (gdb-get-field (gdb-json-partial-output) 'register-values))
-        (register-names-list (reverse gdb-register-names)))
+        (register-names-list (reverse gdb-register-names))
+        (table (gdb-new-table 2)))
     (dolist (register register-values)
       (let* ((register-number (gdb-get-field register 'number))
              (value (gdb-get-field register 'value))
              (register-name (nth (string-to-number register-number) 
                                  register-names-list)))
-        (insert 
-         (concat
-          (propertize register-name 'face font-lock-variable-name-face) 
-          "\t"
+        (gdb-table-add-row
+         table
+         (list
+          (propertize register-name 'face font-lock-variable-name-face)
           (if (member register-number gdb-changed-registers)
               (propertize value 'face font-lock-warning-face)
-            value)
-          "\n"))))))
+            value))
+         '(mouse-face highlight))))
+    (insert (gdb-table-string table " "))))
 
 (defvar gdb-registers-mode-map
   (let ((map (make-sparse-keymap)))
