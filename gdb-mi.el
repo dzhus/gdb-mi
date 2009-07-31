@@ -115,7 +115,6 @@
 (defvar	gdb-memory-prev-page nil
   "Address of previous memory page for program memory buffer.")
 
-(defvar gdb-frame-number "0")
 (defvar gdb-thread-number nil
   "Main current thread.
 
@@ -134,6 +133,8 @@ value.")
 ;; these but rely on buffer-local thread information instead.
 (defvar gdb-selected-frame nil
   "Name of selected function for main current thread.")
+(defvar gdb-frame-number nil
+  "Selected frame level for main current thread.")
 (defvar gdb-selected-file nil
   "Name of selected file for main current thread.")
 (defvar gdb-selected-line nil
@@ -3193,8 +3194,7 @@ member."
 
 (defun gdb-stack-list-frames-custom ()
   (let ((stack (gdb-get-field (gdb-json-partial-output "frame") 'stack))
-        (table (make-gdb-table))
-        (marked-line nil))
+        (table (make-gdb-table)))
          (dolist (frame stack)
            (gdb-table-add-row table
             (list
@@ -3207,14 +3207,11 @@ member."
               (if gdb-stack-buffer-addresses 
                   (concat " at " (gdb-get-field frame 'addr)) "")))
             '(mouse-face highlight
-              help-echo "mouse-2, RET: Select frame"))
-           (when (string-equal (gdb-get-field frame 'func)
-                               gdb-selected-frame)
-             (setq marked-line (1+ (string-to-number
-                                    (gdb-get-field frame 'level))))))
-         (insert (gdb-table-string table " "))
-         (when marked-line
-           (gdb-mark-line marked-line gdb-stack-position))))
+              help-echo "mouse-2, RET: Select frame")))
+         (insert (gdb-table-string table " ")))
+  (when gdb-frame-number
+    (gdb-mark-line (1+ (string-to-number gdb-frame-number))
+                   gdb-stack-position)))
 
 (defun gdb-stack-buffer-name ()
   (gdb-current-context-buffer-name
@@ -3501,7 +3498,7 @@ thread. Called from `gdb-update'."
 	(gdb-add-pending 'gdb-get-main-selected-frame))))
 
 (defun gdb-frame-handler ()
-  "Sets `gdb-pc-address', `gdb-selected-frame' and
+  "Sets `gdb-frame-number', `gdb-selected-frame' and
   `gdb-selected-file' to show overlay arrow in source buffer."
   (gdb-delete-pending 'gdb-get-main-selected-frame)
   (let ((frame (gdb-get-field (gdb-json-partial-output) 'frame)))
