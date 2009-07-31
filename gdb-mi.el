@@ -1149,6 +1149,12 @@ thread."
   (with-current-buffer buffer
     gdb-buffer-type))
 
+(defun gdb-buffer-shows-main-thread-p ()
+  "Return t if current GDB buffer shows main selected thread and
+is not bound to it."
+  (current-buffer)
+  (not (local-variable-p 'gdb-thread-number)))
+
 (defun gdb-get-buffer (buffer-type &optional thread)
   "Get a specific GDB buffer.
 
@@ -3209,7 +3215,8 @@ member."
             '(mouse-face highlight
               help-echo "mouse-2, RET: Select frame")))
          (insert (gdb-table-string table " ")))
-  (when gdb-frame-number
+  (when (and gdb-frame-number
+             (gdb-buffer-shows-main-thread-p))
     (gdb-mark-line (1+ (string-to-number gdb-frame-number))
                    gdb-stack-position)))
 
