@@ -1931,6 +1931,20 @@ FIX-KEY and FIX-KEY work as in `gdb-jsonify-buffer'."
   (with-current-buffer (gdb-get-buffer-create 'gdb-partial-output-buffer)
     (gdb-json-read-buffer fix-key fix-list)))
 
+(defmacro gdb-mark-line (line variable)
+  "Set VARIABLE marker to point at beginning of LINE.
+
+If current window has no fringes, inverse colors on LINE.
+
+Return position where LINE begins."
+  `(save-excursion
+     (goto-line ,line)
+     (set-marker ,variable (point-marker))
+     (when (not (> (car (window-fringes)) 0))
+       (put-text-property (point-at-bol) (point-at-eol)
+                          'font-lock-face '(:inverse-video t)))
+     (point)))
+
 (defun gdb-pad-string (string padding)
   (format (concat "%" (number-to-string padding) "s") string))
 
@@ -2445,9 +2459,7 @@ corresponding to the mode line clicked."
         (setq marked-line (length gdb-threads-list))))
     (insert (gdb-table-string table " "))
     (when marked-line
-      (save-excursion
-        (goto-line marked-line)
-        (set-marker gdb-thread-position (point-marker)))))
+      (gdb-mark-line marked-line gdb-thread-position)))
   ;; We update gud-running here because we need to make sure that
   ;; gdb-threads-list is up-to-date
   (gdb-update-gud-running))
@@ -3200,23 +3212,14 @@ member."
               (if gdb-stack-buffer-addresses 
                   (concat " at " (gdb-get-field frame 'addr)) "")))
             '(mouse-face highlight
-              help-echo "mouse-2, RET: Select frame")))
+              help-echo "mouse-2, RET: Select frame"))
+           (when (string-equal (gdb-get-field frame 'func)
+                               gdb-selected-frame)
+             (setq marked-line (1+ (string-to-number
+                                    (gdb-get-field frame 'level))))))
          (insert (gdb-table-string table " "))
-         (save-excursion
-           (goto-char (point-min))
-           (while (< (point) (point-max))
-             (beginning-of-line)
-             (when (and (looking-at "^[0-9]+\\s-+\\S-+\\s-+\\(\\S-+\\)")
-                        (equal (match-string 1) gdb-selected-frame))
-               (if (> (car (window-fringes)) 0)
-                   (progn
-                     (or gdb-stack-position
-                         (setq gdb-stack-position (make-marker)))
-                     (set-marker gdb-stack-position (point)))
-                 (let ((bl (point-at-bol)))
-                   (put-text-property bl (+ bl 4)
-                                      'face '(:inverse-video t)))))
-             (forward-line 1)))))
+         (when marked-line
+           (gdb-mark-line marked-line gdb-stack-position))))
 
 (defun gdb-stack-buffer-name ()
   (gdb-current-context-buffer-name
@@ -3253,7 +3256,7 @@ member."
   "Major mode for gdb call stack.
 
 \\{gdb-frames-mode-map}"
-  (setq gdb-stack-position nil)
+  (setq gdb-stack-position (make-marker))
   (add-to-list 'overlay-arrow-variable-list 'gdb-stack-position)
   (setq truncate-lines t)  ;; Make it easier to see overlay arrow.
   (set (make-local-variable 'font-lock-defaults)
