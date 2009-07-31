@@ -2393,8 +2393,9 @@ corresponding to the mode line clicked."
   'gdb-invalidate-threads)
 
 (defun gdb-thread-list-handler-custom ()
-  (let* ((res (gdb-json-partial-output))
-         (threads-list (gdb-get-field res 'threads)))
+  (let ((threads-list (gdb-get-field (gdb-json-partial-output) 'threads))
+        (table (make-gdb-table))
+        (marked-line nil))
     (setq gdb-threads-list nil)
     (setq gdb-running-threads-count 0)
     (setq gdb-stopped-threads-count 0)
@@ -2409,38 +2410,47 @@ corresponding to the mode line clicked."
           (incf gdb-running-threads-count)
         (incf gdb-stopped-threads-count))
 
-      (insert (gdb-get-field thread 'id))
-      (when gdb-thread-buffer-verbose-names
-        (insert " " (gdb-get-field thread 'target-id)))
-      (insert " " (gdb-get-field thread 'state))
-      ;; Include frame information for stopped threads
-      (when (not running)
-        (insert " in " (gdb-get-field thread 'frame 'func))
-        (when gdb-thread-buffer-arguments
-          (insert " (")
-          (let ((args (gdb-get-field thread 'frame 'args)))
-            (dolist (arg args)
-              (insert (apply 'format `("%s=%s," ,@(gdb-get-many-fields arg 'name 'value)))))
-            (when args (kill-backward-chars 1)))
-          (insert ")"))
-        (when gdb-thread-buffer-locations
-          (insert (gdb-frame-location (gdb-get-field thread 'frame))))
-        (when gdb-thread-buffer-addresses
-          (insert " at " (gdb-get-field thread 'frame 'addr))))
-      ;; We assume that gdb-thread-number is non-nil by this time
+      (gdb-table-add-row table
+       (list
+        (gdb-get-field thread 'id)
+        (concat
+         (if gdb-thread-buffer-verbose-names
+             (concat (gdb-get-field thread 'target-id) " ") "")
+         (gdb-get-field thread 'state)
+         ;; Include frame information for stopped threads
+         (if (not running)
+             (concat
+              " in " (gdb-get-field thread 'frame 'func)
+              (if gdb-thread-buffer-arguments
+                  (concat
+                   " ("
+                   (let ((args (gdb-get-field thread 'frame 'args)))
+                     (mapconcat
+                      (lambda (arg)
+                        (apply 'format `("%s=%s" ,@(gdb-get-many-fields arg 'name 'value))))
+                      args ",")) 
+                   ")")
+                "")
+              (if gdb-thread-buffer-locations
+                  (gdb-frame-location (gdb-get-field thread 'frame)) "")
+              (if gdb-thread-buffer-addresses
+                  (concat " at " (gdb-get-field thread 'frame 'addr)) ""))
+           "")))
+       (list
+        'gdb-thread thread
+        'mouse-face 'highlight
+        'help-echo "mouse-2, RET: select thread")))
       (when (string-equal gdb-thread-number
                           (gdb-get-field thread 'id))
-        (set-marker gdb-thread-position (line-beginning-position)))
-      (add-text-properties (line-beginning-position)
-                           (line-end-position)
-                           `(gdb-thread ,thread
-                             mouse-face highlight
-                             help-echo "mouse-2, RET: select thread"))
-      ;; We don't use newline to avoid inheriting of text property
-      (insert "\n")))
-    ;; We update gud-running here because we need to make sure that
-    ;; gdb-threads-list is up-to-date
-    (gdb-update-gud-running)))
+        (setq marked-line (length gdb-threads-list))))
+    (insert (gdb-table-string table " "))
+    (when marked-line
+      (save-excursion
+        (goto-line marked-line)
+        (set-marker gdb-thread-position (point-marker)))))
+  ;; We update gud-running here because we need to make sure that
+  ;; gdb-threads-list is up-to-date
+  (gdb-update-gud-running))
 
 (defmacro def-gdb-thread-buffer-command (name custom-defun &optional doc)
   "Define a NAME command which will act upon thread on the current line.
@@ -3176,7 +3186,8 @@ member."
 
 (defun gdb-stack-list-frames-custom ()
   (let ((stack (gdb-get-field (gdb-json-partial-output "frame") 'stack))
-        (table (make-gdb-table)))
+        (table (make-gdb-table))
+        (marked-line nil))
          (dolist (frame stack)
            (gdb-table-add-row table
             (list
