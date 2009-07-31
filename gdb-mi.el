@@ -128,13 +128,14 @@ or explicitly by `gdb-select-thread'.
 Only `gdb-setq-thread-number' should be used to change this
 value.")
 
+(defvar gdb-frame-number nil
+  "Selected frame level for main current thread.")
+
 ;; Used to show overlay arrow in source buffer. All set in
 ;; gdb-get-main-selected-frame. Disassembly buffer should not use
 ;; these but rely on buffer-local thread information instead.
 (defvar gdb-selected-frame nil
   "Name of selected function for main current thread.")
-(defvar gdb-frame-number nil
-  "Selected frame level for main current thread.")
 (defvar gdb-selected-file nil
   "Name of selected file for main current thread.")
 (defvar gdb-selected-line nil
@@ -541,7 +542,7 @@ detailed description of this mode.
 |                                   |                                  |
 +-----------------------------------+----------------------------------+
 | Stack buffer                      | Breakpoints buffer               |
-| RET      gdb-frames-select        | SPC    gdb-toggle-breakpoint     |
+| RET      gdb-select-frame         | SPC    gdb-toggle-breakpoint     |
 |                                   | RET    gdb-goto-breakpoint       |
 |                                   | D      gdb-delete-breakpoint     |
 +-----------------------------------+----------------------------------+"
@@ -1496,13 +1497,18 @@ static char *magick[] = {
   (process-send-string (get-buffer-process gud-comint-buffer)
 		       (concat (car item) "\n")))
 
-(defun gdb-current-context-command (command)
-  "Add --thread option to gdb COMMAND.
+(defun gdb-current-context-command (command &optional noframe)
+  "Add --thread and --frame options to gdb COMMAND.
 
-Option value is taken from `gdb-thread-number'. If
-`gdb-thread-number' is nil, COMMAND is returned unchanged."
+Option values are taken from `gdb-thread-number' and
+`gdb-frame-number'. If `gdb-thread-number' is nil, COMMAND is
+returned unchanged."
+  ;; We assume that if gdb-thread-number is set then gdb-frame-number
+  ;; is set, too
   (if gdb-thread-number
-      (concat command " --thread " gdb-thread-number " ")
+      (concat command " --thread " gdb-thread-number
+                      " --frame " gdb-frame-number
+                      " ")
     command))
 
 (defun gdb-current-context-buffer-name (name)
@@ -2341,7 +2347,7 @@ corresponding to the mode line clicked."
  "Display GDB threads in a new frame.")
 
 (def-gdb-trigger-and-handler
-  gdb-invalidate-threads "-thread-info"
+  gdb-invalidate-threads (gdb-current-context-command "-thread-info")
   gdb-thread-list-handler gdb-thread-list-handler-custom
   '(update update-threads))
 
@@ -3212,8 +3218,9 @@ member."
                   (gdb-frame-location frame) "")
               (if gdb-stack-buffer-addresses 
                   (concat " at " (gdb-get-field frame 'addr)) "")))
-            '(mouse-face highlight
-              help-echo "mouse-2, RET: Select frame")))
+            `(mouse-face highlight
+              help-echo "mouse-2, RET: Select frame"
+              gdb-frame ,frame)))
          (insert (gdb-table-string table " ")))
   (when (and gdb-frame-number
              (gdb-buffer-shows-main-thread-p))
@@ -3242,8 +3249,8 @@ member."
   (let ((map (make-sparse-keymap)))
     (suppress-keymap map)
     (define-key map "q" 'kill-this-buffer)
-    (define-key map "\r" 'gdb-frames-select)
-    (define-key map [mouse-2] 'gdb-frames-select)
+    (define-key map "\r" 'gdb-select-frame)
+    (define-key map [mouse-2] 'gdb-select-frame)
     (define-key map [follow-link] 'mouse-face)
     map))
 
@@ -3270,11 +3277,19 @@ member."
 	   (n (or (and pos (match-string-no-properties 1)) "0")))
       n)))
 
-(defun gdb-frames-select (&optional event)
+(defun gdb-select-frame (&optional event)
   "Select the frame and display the relevant source."
   (interactive (list last-input-event))
   (if event (posn-set-point (event-end event)))
-  (gud-basic-call (concat "-stack-select-frame " (gdb-get-frame-number))))
+  (let ((frame (get-text-property (point) 'gdb-frame)))
+    (if frame
+        (if (gdb-buffer-shows-main-thread-p)
+            (let ((new-level (gdb-get-field frame 'level)))
+              (setq gdb-frame-number new-level)
+;              (gdb-input (list (concat "-stack-select-frame " new-level) 'ignore))
+              (gdb-update))
+          (error "Could not select frame for non-current thread."))
+      (error "Not recognized as frame line"))))
 
 
 ;; Locals buffer.
@@ -3505,12 +3520,11 @@ thread. Called from `gdb-update'."
 	(gdb-add-pending 'gdb-get-main-selected-frame))))
 
 (defun gdb-frame-handler ()
-  "Sets `gdb-frame-number', `gdb-selected-frame' and
-  `gdb-selected-file' to show overlay arrow in source buffer."
+  "Sets `gdb-selected-frame' and `gdb-selected-file' to show
+overlay arrow in source buffer."
   (gdb-delete-pending 'gdb-get-main-selected-frame)
   (let ((frame (gdb-get-field (gdb-json-partial-output) 'frame)))
     (when frame
-      (setq gdb-frame-number (gdb-get-field frame 'level))
       (setq gdb-selected-frame (gdb-get-field frame 'func))
       (setq gdb-selected-file (gdb-get-field frame 'fullname))
       (let ((line (gdb-get-field frame 'line)))
