@@ -3063,37 +3063,32 @@ DOC is an optional documentation string."
   'gdb-invalidate-disassembly)
 
 (defun gdb-disassembly-handler-custom ()
-  (let* ((pos 1)
+  (let* ((instructions (gdb-get-field (gdb-json-partial-output) 'asm_insns))
          (address (gdb-get-field (gdb-current-buffer-frame) 'addr))
-         (res (gdb-json-partial-output))
-         (instructions (gdb-get-field res 'asm_insns))
-         (last-instr (car (last instructions)))
-         (column-padding (+ 2 (string-width
-                               (apply 'format
-                                      `("<%s+%s>:"
-                                        ,@(gdb-get-many-fields last-instr 'func-name 'offset)))))))
+         (pos 1)
+         (table (make-gdb-table))
+         (marked-line nil))
       (dolist (instr instructions)
-      ;; Put overlay arrow
+      (gdb-table-add-row table
+       (list
+        (gdb-get-field instr 'address)
+        (apply 'format `("<%s+%s>:" ,@(gdb-get-many-fields instr 'func-name 'offset)))
+        (gdb-get-field instr 'inst)))
       (when (string-equal (gdb-get-field instr 'address)
                           address)
         (progn
-          (setq pos (point))
+          (setq marked-line (length (gdb-table-rows table)))
           (setq fringe-indicator-alist
                 (if (string-equal gdb-frame-number "0")
                     nil
-                  '((overlay-arrow . hollow-right-triangle))))
-          (set-marker gdb-overlay-arrow-position (point))))
-      (insert 
-       (concat
-        (gdb-get-field instr 'address)
-        " "
-        (gdb-pad-string (apply 'format `("<%s+%s>:" ,@(gdb-get-many-fields instr 'func-name 'offset)))
-                        (- column-padding))
-        (gdb-get-field instr 'inst)
-        "\n")))
+                  '((overlay-arrow . hollow-right-triangle)))))))
+      (insert (gdb-table-string table " "))
       (gdb-disassembly-place-breakpoints)
-      (let ((window (get-buffer-window (current-buffer) 0)))
-        (set-window-point window pos))
+      ;; Mark current position with overlay arrow and scroll window to
+      ;; that point
+      (when marked-line
+        (let ((window (get-buffer-window (current-buffer) 0)))
+          (set-window-point window (gdb-mark-line marked-line gdb-overlay-arrow-position))))
       (setq mode-name
             (concat "Disassembly: " 
                     (gdb-get-field (gdb-current-buffer-frame) 'func)))))
