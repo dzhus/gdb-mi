@@ -1502,6 +1502,7 @@ static char *magick[] = {
   (process-send-string (get-buffer-process gud-comint-buffer)
 		       (concat (car item) "\n")))
 
+;; NOFRAME is used for gud execution control commands
 (defun gdb-current-context-command (command &optional noframe)
   "Add --thread and --frame options to gdb COMMAND.
 
@@ -1608,7 +1609,8 @@ need to be updated appropriately when current thread changes."
   "Set `gud-running' and `gdb-frame-number' according to the state
 of current thread.
 
-`gdb-frame-number'
+`gdb-frame-number' is set to nil if new current thread is
+running.
 
 Note that when `gdb-gud-control-all-threads' is t, `gud-running'
 cannot be reliably used to determine whether or not execution
@@ -1618,11 +1620,16 @@ instead.
 
 For all-stop mode, thread information is unavailable while target
 is running."
-  (setq gud-running
-        (string= (gdb-get-field (gdb-current-buffer-thread) 'state)
-                 "running"))
-  (when gud-running
-    (setq gdb-frame-number nil)))
+  (let ((old-value gud-running))
+    (setq gud-running
+          (string= (gdb-get-field (gdb-current-buffer-thread) 'state)
+                   "running"))
+    ;; We change frame number only if the state of current thread has
+    ;; changed.
+    (when (not (eq gud-running old-value))
+      (if gud-running
+          (setq gdb-frame-number nil)
+        (setq gdb-frame-number "0")))))
 
 ;; GUD displays the selected GDB frame.  This might might not be the current
 ;; GDB frame (after up, down etc).  If no GDB frame is visible but the last
@@ -1738,6 +1745,14 @@ Sets `gdb-thread-number' to new id."
      (gdb-update))))
 
 (defun gdb-running (output-field)
+  (let* ((thread-id (gdb-get-field (gdb-json-string output-field) 'thread-id)))
+    ;; We reset gdb-frame-number to nil if current thread has gone
+    ;; running. This can't be done in gdb-thread-list-handler-custom
+    ;; because we need correct gdb-frame-number by the time
+    ;; -thread-info command is sent.
+    (when (or (string-equal thread-id "all")
+              (string-equal thread-id gdb-thread-number))
+      (setq gdb-frame-number nil)))
   (setq gdb-inferior-status "running")
   (gdb-force-mode-line-update
    (propertize gdb-inferior-status 'face font-lock-type-face))
