@@ -1963,13 +1963,14 @@ If current window has no fringes, inverse colors on LINE.
 
 Return position where LINE begins."
   `(save-excursion
-     (set-marker ,variable
-                 (copy-marker
-                  (line-beginning-position (1+ (- ,line (line-number-at-pos))))))
-     (when (not (> (car (window-fringes)) 0))
-       (put-text-property (point-at-bol) (point-at-eol)
-                          'font-lock-face '(:inverse-video t)))
-     (point)))
+     (let* ((offset (1+ (- ,line (line-number-at-pos))))
+            (start-posn (line-beginning-position offset))
+            (end-posn (line-end-position offset)))
+       (set-marker ,variable (copy-marker start-posn))
+       (when (not (> (car (window-fringes)) 0))
+         (put-text-property start-posn end-posn
+                            'font-lock-face '(:inverse-video t)))
+       start-posn)))
 
 (defun gdb-pad-string (string padding)
   (format (concat "%" (number-to-string padding) "s") string))
