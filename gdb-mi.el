@@ -1960,8 +1960,9 @@ If current window has no fringes, inverse colors on LINE.
 
 Return position where LINE begins."
   `(save-excursion
-     (goto-line ,line)
-     (set-marker ,variable (point-marker))
+     (set-marker ,variable
+                 (copy-marker
+                  (line-beginning-position (1+ (- ,line (line-number-at-pos))))))
      (when (not (> (car (window-fringes)) 0))
        (put-text-property (point-at-bol) (point-at-eol)
                           'font-lock-face '(:inverse-video t)))
