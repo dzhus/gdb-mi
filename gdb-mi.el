@@ -1732,7 +1732,17 @@ is running."
 ;; gdb-invalidate-threads is defined to accept 'update-threads signal
 (defun gdb-thread-created (output-field))
 (defun gdb-thread-exited (output-field)
-  (gdb-emit-signal gdb-buf-publisher 'update-threads))
+  "Handle =thread-exited async record: unset `gdb-thread-number'
+if current thread exited and update threads list."
+   (let* ((thread-id (gdb-get-field (gdb-json-string output-field) 'id)))
+     (if (string= gdb-thread-number thread-id)
+         (gdb-setq-thread-number nil))
+     ;; When we continue current thread and it quickly exits,
+     ;; gdb-pending-triggers left after gdb-running disallow us to
+     ;; properly call -thread-info without --thread option. Thus we
+     ;; need to use gdb-wait-for-pending.
+     (gdb-wait-for-pending
+      (gdb-emit-signal gdb-buf-publisher 'update-threads))))
 
 (defun gdb-thread-selected (output-field)
   "Handler for =thread-selected MI output record.
