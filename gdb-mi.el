@@ -176,8 +176,11 @@ as returned from \"-break-list\" by `gdb-json-partial-output'
 Each element has the form (VARNUM EXPRESSION NUMCHILD TYPE VALUE STATUS) where
 STATUS is nil (unchanged), `changed' or `out-of-scope'.")
 (defvar gdb-main-file nil "Source file from which program execution begins.")
-(defvar gdb-overlay-arrow-position nil)
+
+;; Overlay arrow markers
 (defvar gdb-stack-position nil)
+(defvar gdb-thread-position nil)
+(defvar gdb-disassembly-position nil)
 
 (defvar gdb-location-alist nil
   "Alist of breakpoint numbers and full filenames.  Only used for files that
@@ -808,7 +811,7 @@ with mouse-1 (default bindings)."
     (gdb-if-arrow gud-overlay-arrow-position
 		  (setq line (line-number-at-pos (posn-point end)))
 		  (gud-call (concat "until " (number-to-string line))))
-    (gdb-if-arrow gdb-overlay-arrow-position
+    (gdb-if-arrow gdb-disassembly-position
 		  (save-excursion
 		    (goto-line (line-number-at-pos (posn-point end)))
 		    (forward-char 2)
@@ -828,7 +831,7 @@ line, and no execution takes place."
 		  (progn
 		    (gud-call (concat "tbreak " (number-to-string line)))
 		    (gud-call (concat "jump " (number-to-string line)))))
-    (gdb-if-arrow gdb-overlay-arrow-position
+    (gdb-if-arrow gdb-disassembly-position
 		  (save-excursion
 		    (goto-line (line-number-at-pos (posn-point end)))
 		    (forward-char 2)
@@ -3076,9 +3079,9 @@ DOC is an optional documentation string."
 
 \\{gdb-disassembly-mode-map}"
   ;; TODO Rename overlay variable for disassembly mode
-  (add-to-list 'overlay-arrow-variable-list 'gdb-overlay-arrow-position)
+  (add-to-list 'overlay-arrow-variable-list 'gdb-disassembly-position)
   (setq fringes-outside-margins t)
-  (setq gdb-overlay-arrow-position (make-marker))
+  (setq gdb-disassembly-position (make-marker))
   (set (make-local-variable 'font-lock-defaults)
        '(gdb-disassembly-font-lock-keywords))
   (run-mode-hooks 'gdb-disassembly-mode-hook)
@@ -3110,7 +3113,7 @@ DOC is an optional documentation string."
       ;; that point
       (when marked-line
         (let ((window (get-buffer-window (current-buffer) 0)))
-          (set-window-point window (gdb-mark-line marked-line gdb-overlay-arrow-position))))
+          (set-window-point window (gdb-mark-line marked-line gdb-disassembly-position))))
       (setq mode-name
             (concat "Disassembly: " 
                     (gdb-get-field (gdb-current-buffer-frame) 'func)))))
@@ -3800,9 +3803,9 @@ Kills the gdb buffers, and resets variables and the source buffers."
 	      (setq gud-minor-mode nil)
 	      (kill-local-variable 'tool-bar-map)
 	      (kill-local-variable 'gdb-define-alist))))))
-  (setq gdb-overlay-arrow-position nil)
+  (setq gdb-disassembly-position nil)
   (setq overlay-arrow-variable-list
-	(delq 'gdb-overlay-arrow-position overlay-arrow-variable-list))
+	(delq 'gdb-disassembly-position overlay-arrow-variable-list))
   (setq fringe-indicator-alist '((overlay-arrow . right-triangle)))
   (setq gdb-stack-position nil)
   (setq overlay-arrow-variable-list
