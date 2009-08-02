@@ -137,10 +137,16 @@
   result, other handlers may get outdated information from
   `gdb-threads-list`.
 
-* TODO [#B] Fix multiple overlay arrows                          :threads:ui:
+* DONE [#B] Fix multiple overlay arrows                          :threads:ui:
+  CLOSED: [2009-08-02 Вск 23:51]
   When observing disassembly/stack buffer for several threads, overlay
   arrow is shown only in one of them.
+  
+  Stack buffer arrow is shown for current thread only (we cannot
+  change frame for non-current thread, so putting arrow there is useless).
 
+  Disassembly arrow is set via buffer-local `gdb-disassembly-position`
+  variable.
 * DONE Fix pending breakpoints
   CLOSED: [2009-07-21 Втр 00:38]
 * Disassembly buffer
@@ -182,8 +188,9 @@
 
   The same applies to disassembly buffer.
 
-* TODO [#D] Support overlay arrow in threads list for text terminals     :ui:
-
+* DONE [#D] Support overlay arrow in threads list for text terminals     :ui:
+  CLOSED: [2009-08-02 Вск 23:51]
+  gdb-mark-line does this
 * DONE Change gdb-display-buffer
   CLOSED: [2009-07-22 Срд]
   Too many windows appear now. It should be possible to preempt
