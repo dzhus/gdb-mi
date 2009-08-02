@@ -128,8 +128,10 @@ or explicitly by `gdb-select-thread'.
 Only `gdb-setq-thread-number' should be used to change this
 value.")
 
-(defvar gdb-frame-number "0"
-  "Selected frame level for main current thread.")
+(defvar gdb-frame-number nil
+  "Selected frame level for main current thread.
+
+Set to 0 whenever current thread changes.")
 
 ;; Used to show overlay arrow in source buffer. All set in
 ;; gdb-get-main-selected-frame. Disassembly buffer should not use
@@ -671,7 +673,7 @@ detailed description of this mode.
 (defun gdb-init-1 ()
   ;; (re-)initialise
   (setq gdb-selected-frame nil
-	gdb-frame-number "0"
+	gdb-frame-number nil
         gdb-thread-number nil
 	gdb-var-list nil
 	gdb-pending-triggers nil
@@ -1592,8 +1594,11 @@ valid signal handlers.")
 ;; because we may need to update current gud-running value without
 ;; changing current thread (see gdb-running)
 (defun gdb-setq-thread-number (number)
-  "Set `gdb-thread-number' to NUMBER and update `gud-running'."
+  "Only this function must be used to change `gdb-thread-number'
+value to NUMBER, because `gud-running' and `gdb-frame-number'
+need to be updated appropriately when current thread changes."
   (setq gdb-thread-number number)
+  (setq gdb-frame-number "0")
   (gdb-update-gud-running))
 
 (defun gdb-update-gud-running ()
@@ -2349,7 +2354,7 @@ corresponding to the mode line clicked."
  "Display GDB threads in a new frame.")
 
 (def-gdb-trigger-and-handler
-  gdb-invalidate-threads (gdb-current-context-command "-thread-info")
+  gdb-invalidate-threads (gdb-current-context-command "-thread-info" gud-running)
   gdb-thread-list-handler gdb-thread-list-handler-custom
   '(update update-threads))
 
