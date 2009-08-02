@@ -124,7 +124,7 @@
   the top one. Does it make sense to update such buffers as we step
   through the target?
 
-* TODO [#B] Cleanup unused buffers                               :threads:ui:
+* TODO [#C] Cleanup unused buffers                               :threads:ui:
   Kill buffers which are bound to threads which already exited. This
   can be done by handling =thread-exited notification.
 
@@ -137,6 +137,10 @@
   result, other handlers may get outdated information from
   `gdb-threads-list`.
 
+* TODO [#B] Do not use goto-line                                         :ui:
+  gud-display-frame and gdb-place-breakpoints use goto-line which
+  yields «Mark set» message. This prevents user from seeing important
+  messages about stopped/switched threads.
 * DONE [#B] Fix multiple overlay arrows                          :threads:ui:
   CLOSED: [2009-08-02 Вск 23:51]
   When observing disassembly/stack buffer for several threads, overlay
@@ -164,14 +168,14 @@
    output =\ [[-symbol-info-symbol]] should allow this, but it's
    not implemented yet.
 
-* TODO [0/5] [#C] Rewrite handlers for -var commands                :parsing:
+* TODO [0/5] [#B] Rewrite handlers for -var commands                :parsing:
   - [ ] gdb-var-create-handler
   - [ ] gdb-var-evaluate-expression-handler
   - [ ] gdb-edit-value-handler
   - [ ] gdb-var-list-children-handler
   - [ ] gdb-var-update-handler
    
-* TODO [#C] Stack information handling
+* TODO [#D] Stack information handling
   gdb-frame-handler is not robust. Must think of how should gdb-mi
   act when we stop in a routine w/o line info. Currently we simply
   don't reset gud-last-frame in this case. Disassembly buffer falls
@@ -200,8 +204,6 @@
   CLOSED: [2009-07-22 Срд 22:41]
   See also gud-display-line for implementation ideas
   We don't need it at all.
-* TODO Rewrite gdb-place-breakpoints                                :cleanup:
-  
 * GDB                                                                   :GDB:
 ** TODO Send -symbol-info-symbol patch
    Patch: [[file:~/projects/gdb-trunk/symbol-info-symbol.diff]]
