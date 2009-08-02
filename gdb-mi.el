@@ -3215,6 +3215,7 @@ member."
 (defun gdb-stack-list-frames-custom ()
   (let ((stack (gdb-get-field (gdb-json-partial-output "frame") 'stack))
         (table (make-gdb-table)))
+    (set-marker gdb-stack-position nil)
          (dolist (frame stack)
            (gdb-table-add-row table
             (list
