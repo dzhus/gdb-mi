@@ -131,7 +131,7 @@ value.")
 (defvar gdb-frame-number nil
   "Selected frame level for main current thread.
 
-Set to 0 whenever current thread changes.")
+Reset whenever current thread changes.")
 
 ;; Used to show overlay arrow in source buffer. All set in
 ;; gdb-get-main-selected-frame. Disassembly buffer should not use
@@ -1596,10 +1596,12 @@ valid signal handlers.")
 (defun gdb-setq-thread-number (number)
   "Only this function must be used to change `gdb-thread-number'
 value to NUMBER, because `gud-running' and `gdb-frame-number'
-need to be updated appropriately when current thread changes."
+need to be updated appropriately when current thread changes.
+
+When"
   (setq gdb-thread-number number)
-  (setq gdb-frame-number "0")
-  (gdb-update-gud-running))
+  (gdb-update-gud-running)
+  (setq gdb-frame-number (and (not gud-running) "0")))
 
 (defun gdb-update-gud-running ()
   "Set `gud-running' according to the state of current thread.
