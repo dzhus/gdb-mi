@@ -1507,13 +1507,13 @@ static char *magick[] = {
 
 Option values are taken from `gdb-thread-number' and
 `gdb-frame-number'. If `gdb-thread-number' is nil, COMMAND is
-returned unchanged. If NOFRAME is t, then no --frame option is
-added."
-  ;; We assume that if gdb-thread-number is set then gdb-frame-number
-  ;; is set, too
+returned unchanged. If `gdb-frame-number' is nil of NOFRAME is t,
+then no --frame option is added."
+  ;; gdb-frame-number may be nil while gdb-thread-number is non-nil
+  ;; (when current thread is running)
   (if gdb-thread-number
       (concat command " --thread " gdb-thread-number
-              (if (not noframe) 
+              (if (not (or noframe (not gdb-frame-number)))
                   (concat " --frame " gdb-frame-number) "")
               " ")
     command))
@@ -1599,15 +1599,16 @@ valid signal handlers.")
 (defun gdb-setq-thread-number (number)
   "Only this function must be used to change `gdb-thread-number'
 value to NUMBER, because `gud-running' and `gdb-frame-number'
-need to be updated appropriately when current thread changes.
-
-When"
+need to be updated appropriately when current thread changes."
   (setq gdb-thread-number number)
-  (gdb-update-gud-running)
-  (setq gdb-frame-number (and (not gud-running) "0")))
+  (setq gdb-frame-number "0")
+  (gdb-update-gud-running))
 
 (defun gdb-update-gud-running ()
-  "Set `gud-running' according to the state of current thread.
+  "Set `gud-running' and `gdb-frame-number' according to the state
+of current thread.
+
+`gdb-frame-number'
 
 Note that when `gdb-gud-control-all-threads' is t, `gud-running'
 cannot be reliably used to determine whether or not execution
@@ -1619,7 +1620,9 @@ For all-stop mode, thread information is unavailable while target
 is running."
   (setq gud-running
         (string= (gdb-get-field (gdb-current-buffer-thread) 'state)
-                 "running")))
+                 "running"))
+  (when gud-running
+    (setq gdb-frame-number nil)))
 
 ;; GUD displays the selected GDB frame.  This might might not be the current
 ;; GDB frame (after up, down etc).  If no GDB frame is visible but the last
@@ -2572,12 +2575,12 @@ current line.")
 line."
   `(def-gdb-thread-buffer-command ,name
      (if gdb-non-stop
-         (let ((gdb-thread-number (gdb-get-field thread 'id)))
+         (let ((gdb-thread-number (gdb-get-field thread 'id))
+               (gdb-gud-control-all-threads nil))
            (call-interactively #',gud-command))
        (error "Available in non-stop mode only, customize gdb-non-stop-setting."))
      ,doc))
 
-;; Does this make sense in all-stop mode?
 (def-gdb-thread-buffer-gud-command
   gdb-interrupt-thread
   gud-stop-subjob
