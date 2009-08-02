@@ -128,7 +128,7 @@ or explicitly by `gdb-select-thread'.
 Only `gdb-setq-thread-number' should be used to change this
 value.")
 
-(defvar gdb-frame-number nil
+(defvar gdb-frame-number "0"
   "Selected frame level for main current thread.")
 
 ;; Used to show overlay arrow in source buffer. All set in
@@ -488,7 +488,7 @@ When `gdb-non-stop' is nil, return COMMAND unchanged."
       (if (and gdb-gud-control-all-threads
                (not noall))
           (concat command " --all ")
-        (gdb-current-context-command command))
+        (gdb-current-context-command command t))
     command))
 
 ;; TODO Document this. We use noarg when not in gud-def
@@ -671,7 +671,7 @@ detailed description of this mode.
 (defun gdb-init-1 ()
   ;; (re-)initialise
   (setq gdb-selected-frame nil
-	gdb-frame-number nil
+	gdb-frame-number "0"
         gdb-thread-number nil
 	gdb-var-list nil
 	gdb-pending-triggers nil
@@ -1502,13 +1502,15 @@ static char *magick[] = {
 
 Option values are taken from `gdb-thread-number' and
 `gdb-frame-number'. If `gdb-thread-number' is nil, COMMAND is
-returned unchanged."
+returned unchanged. If NOFRAME is t, then no --frame option is
+added."
   ;; We assume that if gdb-thread-number is set then gdb-frame-number
   ;; is set, too
   (if gdb-thread-number
       (concat command " --thread " gdb-thread-number
-                      " --frame " gdb-frame-number
-                      " ")
+              (if (not noframe) 
+                  (concat " --frame " gdb-frame-number) "")
+              " ")
     command))
 
 (defun gdb-current-context-buffer-name (name)
@@ -2552,32 +2554,31 @@ current line.")
   "Display a new frame with disassembly buffer for the thread at
 current line.")
 
-(defmacro def-gdb-thread-buffer-gdb-command (name gdb-command &optional doc)
-  "Define a NAME which will execute send GDB-COMMAND with
+(defmacro def-gdb-thread-buffer-gud-command (name gud-command &optional doc)
+  "Define a NAME which will execute GUD-COMMAND with
 `gdb-thread-number' locally bound to id of thread on the current
 line."
   `(def-gdb-thread-buffer-command ,name
      (if gdb-non-stop
          (let ((gdb-thread-number (gdb-get-field thread 'id)))
-           (gdb-input (list (gdb-current-context-command ,gdb-command)
-                            'ignore)))
-       (error "Available in non-stop mode only, customize gdb-non-stop."))
-       ,doc))
+           (call-interactively #',gud-command))
+       (error "Available in non-stop mode only, customize gdb-non-stop-setting."))
+     ,doc))
 
 ;; Does this make sense in all-stop mode?
-(def-gdb-thread-buffer-gdb-command
+(def-gdb-thread-buffer-gud-command
   gdb-interrupt-thread
-  "-exec-interrupt"
+  gud-stop-subjob
   "Interrupt thread at current line.")
 
-(def-gdb-thread-buffer-gdb-command
+(def-gdb-thread-buffer-gud-command
   gdb-continue-thread
-  "-exec-continue"
+  gud-cont
   "Continue thread at current line.")
 
-(def-gdb-thread-buffer-gdb-command
+(def-gdb-thread-buffer-gud-command
   gdb-step-thread
-  "-exec-step"
+  gud-step
   "Step thread at current line.")
 
 (defun gdb-set-header (buffer)
