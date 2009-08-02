@@ -3271,13 +3271,6 @@ member."
   (run-mode-hooks 'gdb-frames-mode-hook)
   'gdb-invalidate-frames)
 
-(defun gdb-get-frame-number ()
-  (save-excursion
-    (end-of-line)
-    (let* ((pos (re-search-backward "^\\([0-9]+\\)" nil t))
-	   (n (or (and pos (match-string-no-properties 1)) "0")))
-      n)))
-
 (defun gdb-select-frame (&optional event)
   "Select the frame and display the relevant source."
   (interactive (list last-input-event))
@@ -3287,7 +3280,7 @@ member."
         (if (gdb-buffer-shows-main-thread-p)
             (let ((new-level (gdb-get-field frame 'level)))
               (setq gdb-frame-number new-level)
-;              (gdb-input (list (concat "-stack-select-frame " new-level) 'ignore))
+              (gdb-input (list (concat "-stack-select-frame " new-level) 'ignore))
               (gdb-update))
           (error "Could not select frame for non-current thread."))
       (error "Not recognized as frame line"))))
