@@ -2130,13 +2130,13 @@ HANDLER-NAME handler uses customization of CUSTOM-DEFUN. See
         (gdb-get-field breakpoint 'disp)
         (let ((flag (gdb-get-field breakpoint 'enabled)))
           (if (string-equal flag "y")
-              (propertize "y" 'face  font-lock-warning-face)
-            (propertize "n" 'face  font-lock-comment-face)))
+              (propertize "y" 'font-lock-face  font-lock-warning-face)
+            (propertize "n" 'font-lock-face  font-lock-comment-face)))
         (gdb-get-field breakpoint 'times)
         (gdb-get-field breakpoint 'addr)
           (or pending at
               (concat "in "
-                      (propertize func 'face font-lock-function-name-face)
+                      (propertize func 'font-lock-face font-lock-function-name-face)
                       (gdb-frame-location breakpoint))))
        ;; Add clickable properties only for breakpoints with file:line
        ;; information
@@ -3357,8 +3357,8 @@ member."
         (gdb-table-add-row 
          table 
          (list
-          (propertize type 'face font-lock-type-face)
-          (propertize name 'face font-lock-variable-name-face)
+          (propertize type 'font-lock-face font-lock-type-face)
+          (propertize name 'font-lock-face font-lock-variable-name-face)
           value)
          '(mouse-face highlight))))
     (insert (gdb-table-string table " "))
@@ -3432,9 +3432,9 @@ member."
         (gdb-table-add-row
          table
          (list
-          (propertize register-name 'face font-lock-variable-name-face)
+          (propertize register-name 'font-lock-face font-lock-variable-name-face)
           (if (member register-number gdb-changed-registers)
-              (propertize value 'face font-lock-warning-face)
+              (propertize value 'font-lock-face font-lock-warning-face)
             value))
          '(mouse-face highlight))))
     (insert (gdb-table-string table " "))))
