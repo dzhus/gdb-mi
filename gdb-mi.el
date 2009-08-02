@@ -1631,6 +1631,24 @@ is running."
           (setq gdb-frame-number nil)
         (setq gdb-frame-number "0")))))
 
+(defun gdb-show-run-p ()
+  "Return t if \"Run/continue\" should be shown on the toolbar."
+  (or (and (or
+            (not gdb-gud-control-all-threads)
+            (not gdb-non-stop))
+           (not gud-running))
+      (and gdb-gud-control-all-threads
+           (> gdb-stopped-threads-count 0))))
+
+(defun gdb-show-stop-p ()
+  "Return t if \"Stop\" should be shown on the toolbar."
+  (or (and (or
+            (not gdb-gud-control-all-threads)
+            (not gdb-non-stop))
+           gud-running)
+      (and gdb-gud-control-all-threads
+           (> gdb-running-threads-count 0))))
+
 ;; GUD displays the selected GDB frame.  This might might not be the current
 ;; GDB frame (after up, down etc).  If no GDB frame is visible but the last
 ;; visited breakpoint is, use that window.
