@@ -1769,6 +1769,13 @@ Sets `gdb-thread-number' to new id."
   (let* ((result (gdb-json-string output-field))
          (thread-id (gdb-get-field result 'id)))
     (gdb-setq-thread-number thread-id)
+    ;; Typing `thread N` in GUD buffer makes GDB emit `^done` followed
+    ;; by `=thread-selected` notification. `^done` causes `gdb-update`
+    ;; as usually. Things happen to fast and second call (from
+    ;; gdb-thread-selected handler) gets cut off by our beloved
+    ;; gdb-pending-triggers.
+    ;; Solution is `gdb-wait-for-pending` macro: it guarantees that its
+    ;; body will get executed when `gdb-pending-triggers` is empty.
     (gdb-wait-for-pending
      (gdb-update))))
 
@@ -2143,7 +2150,7 @@ If NOPRESERVE is non-nil, window point is not restored after CUSTOM-DEFUN."
   "Define trigger and handler.
 
 TRIGGER-NAME trigger is defined to send GDB-COMMAND. See
-`def-gdb-auto-update-trigger'. SIGNAL-LIST determines when 
+`def-gdb-auto-update-trigger'.
 
 HANDLER-NAME handler uses customization of CUSTOM-DEFUN. See
 `def-gdb-auto-update-handler'."
@@ -2159,7 +2166,8 @@ HANDLER-NAME handler uses customization of CUSTOM-DEFUN. See
 ;; Breakpoint buffer : This displays the output of `-break-list'.
 (def-gdb-trigger-and-handler
   gdb-invalidate-breakpoints "-break-list"
-  gdb-breakpoints-list-handler gdb-breakpoints-list-handler-custom)
+  gdb-breakpoints-list-handler gdb-breakpoints-list-handler-custom
+  '(update))
 
 (gdb-set-buffer-rules 
  'gdb-breakpoints-buffer
@@ -2712,7 +2720,8 @@ line."
           gdb-memory-rows
           gdb-memory-columns)
   gdb-read-memory-handler
-  gdb-read-memory-custom)
+  gdb-read-memory-custom
+  '(update))
 
 (gdb-set-buffer-rules
  'gdb-memory-buffer
@@ -3085,7 +3094,8 @@ DOC is an optional documentation string."
          (line (gdb-get-field frame 'line)))
     (when file
       (format "-data-disassemble -f %s -l %s -n -1 -- 0" file line)))
-  gdb-disassembly-handler)
+  gdb-disassembly-handler
+  '(update))
 
 (def-gdb-auto-update-handler
   gdb-disassembly-handler
@@ -3243,7 +3253,8 @@ breakpoints buffer."
 ;;
 (def-gdb-trigger-and-handler
   gdb-invalidate-frames (gdb-current-context-command "-stack-list-frames")
-  gdb-stack-list-frames-handler gdb-stack-list-frames-custom)
+  gdb-stack-list-frames-handler gdb-stack-list-frames-custom
+  '(update))
 
 (gdb-set-buffer-rules
  'gdb-stack-buffer
@@ -3350,7 +3361,8 @@ member."
 (def-gdb-trigger-and-handler
   gdb-invalidate-locals
   (concat (gdb-current-context-command "-stack-list-locals") " --simple-values")
-  gdb-locals-handler gdb-locals-handler-custom)
+  gdb-locals-handler gdb-locals-handler-custom
+  '(update))
 
 (gdb-set-buffer-rules
  'gdb-locals-buffer
@@ -3464,7 +3476,8 @@ member."
   gdb-invalidate-registers
   (concat (gdb-current-context-command "-data-list-register-values") " x")
   gdb-registers-handler
-  gdb-registers-handler-custom)
+  gdb-registers-handler-custom
+  '(update))
 
 (gdb-set-buffer-rules
  'gdb-registers-buffer
