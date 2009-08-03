@@ -1854,7 +1854,7 @@ current thread and update GDB buffers."
     ;; In all-stop this updates gud-running properly as well.
     (gdb-update)
     (setq gdb-first-done-or-error nil))
-  (run-hook-with-args 'gdb-stopped-hook result)))
+  (run-hook-with-args 'gdb-stopped-hooks result)))
 
 ;; Remove the trimmings from log stream containing debugging messages
 ;; being produced by GDB's internals, use warning face and send to GUD
