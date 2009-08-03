@@ -1181,7 +1181,11 @@ The buffer-type should be one of the cars in `gdb-buffer-rules'.
 If THREAD is non-nil, it is assigned to `gdb-thread-number'
 buffer-local variable of the new buffer.
 
-If buffer's mode returns a symbol, it's used to register "
+Buffer mode and name are selected according to buffer type.
+
+If buffer has trigger associated with it in `gdb-buffer-rules',
+this trigger is subscribed to `gdb-buf-publisher' and called with
+'update argument."
   (or (gdb-get-buffer buffer-type thread)
       (let ((rules (assoc buffer-type gdb-buffer-rules))
             (new (generate-new-buffer "limbo")))
@@ -1200,7 +1204,7 @@ If buffer's mode returns a symbol, it's used to register "
               (gdb-add-subscriber gdb-buf-publisher
                                   (cons (current-buffer)
                                         (gdb-bind-function-to-buffer trigger (current-buffer))))
-              (funcall trigger))
+              (funcall trigger 'update))
             (current-buffer))))))
 
 (defun gdb-bind-function-to-buffer (expr buffer)
@@ -2096,7 +2100,9 @@ HANDLER-NAME as its handler. HANDLER-NAME is bound to current
 buffer with `gdb-bind-function-to-buffer'.
 
 If SIGNAL-LIST is non-nil, GDB-COMMAND is sent only when the
-defined trigger is called with an argument from SIGNAL-LIST.
+defined trigger is called with an argument from SIGNAL-LIST. It's
+not recommended to define triggers with empty SIGNAL-LIST.
+Normally triggers should respond at least to 'update signal.
 
 Normally the trigger defined by this command must be called from
 the buffer where HANDLER-NAME must work. This should be done so
