@@ -1541,11 +1541,9 @@ then no --frame option is added."
 
 If `gdb-thread-number' is nil, just wrap NAME in asterisks."
   (concat "*" name
-          (format
-           (cond ((local-variable-p 'gdb-thread-number) " (bound to thread %s)")
-                 (gdb-thread-number " (current thread %s)")
-                 (t ""))
-           gdb-thread-number)
+          (if (local-variable-p 'gdb-thread-number) 
+              (format " (bound to thread %s)" gdb-thread-number)
+            "")
           "*"))
 
 
