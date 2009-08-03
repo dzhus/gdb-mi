@@ -3153,7 +3153,7 @@ DOC is an optional documentation string."
   ;; TODO Rename overlay variable for disassembly mode
   (add-to-list 'overlay-arrow-variable-list 'gdb-disassembly-position)
   (setq fringes-outside-margins t)
-  (setq gdb-disassembly-position (make-marker))
+  (set (make-local-variable 'gdb-disassembly-position) (make-marker))
   (set (make-local-variable 'font-lock-defaults)
        '(gdb-disassembly-font-lock-keywords))
   (run-mode-hooks 'gdb-disassembly-mode-hook)
