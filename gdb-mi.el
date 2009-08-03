@@ -260,6 +260,22 @@ This function checks `gdb-pending-triggers' value every
           (progn
             ,@body)
         (gdb-wait-for-pending ,@body)))))
+
+(defgroup gdb nil
+  "GDB graphical interface"
+  :group 'tools
+  :link '(info-link "(emacs)GDB Graphical Interface")
+  :version "23.2")
+
+(defgroup gdb-non-stop nil
+  "GDB non-stop debugging settings"
+  :group 'gdb
+  :version "23.2")
+
+(defgroup gdb-buffers nil
+  "GDB buffers"
+  :group 'gdb
+  :version "23.2")
   
 (defcustom gdb-debug-log-max 128
   "Maximum size of `gdb-debug-log'.  If nil, size is unlimited."
@@ -275,17 +291,16 @@ other threads continue to execute.
 GDB session needs to be restarted for this setting to take
 effect."
   :type 'boolean
-  :group 'gdb
+  :group 'gdb-non-stop
   :version "23.2")
 
 ;; TODO Some commands can't be called with --all (give a notice about
 ;; it in setting doc)
 (defcustom gdb-gud-control-all-threads t
   "When enabled, GUD execution commands affect all threads when
-in non-stop mode. Otherwise, only currently selected thread is
-affected."
+in non-stop mode. Otherwise, only current thread is affected."
   :type 'boolean
-  :group 'gdb
+  :group 'gdb-non-stop
   :version "23.2")
 
 (defcustom gdb-switch-reasons t
@@ -312,7 +327,7 @@ Emacs always switches to the thread which caused the stop."
                (const :tag "End of stepping range reached." "end-stepping-range")
                (const :tag "Signal received (like interruption)." "signal-received"))
           (const :tag "None" nil))
-  :group 'gdb
+  :group 'gdb-non-stop
   :version "23.2"
   :link '(info-link "(gdb)GDB/MI Async Records"))
 
@@ -334,6 +349,8 @@ contains fields of corresponding MI *stopped async record:
             (addr . \"0x0804869e\"))
      (reason . \"end-stepping-range\"))
 
+Note that \"reason\" is only present in non-stop debugging mode.
+
 `gdb-get-field' may be used to access the fields of response.
 
 Each function is called after the new current thread was selected
@@ -347,43 +364,43 @@ and GDB buffers were updated in `gdb-stopped'."
   "When nil, Emacs won't switch to stopped thread if some other
 stopped thread is already selected."
   :type 'boolean
-  :group 'gdb
+  :group 'gdb-non-stop
   :version "23.2")
 
 (defcustom gdb-stack-buffer-locations t
   "Show file information or library names in stack buffers."
   :type 'boolean
-  :group 'gdb
+  :group 'gdb-buffers
   :version "23.2")
 
 (defcustom gdb-stack-buffer-addresses nil
   "Show frame addresses in stack buffers."
   :type 'boolean
-  :group 'gdb
+  :group 'gdb-buffers
   :version "23.2")
 
 (defcustom gdb-thread-buffer-verbose-names t
   "Show long thread names in threads buffer."
   :type 'boolean
-  :group 'gdb
+  :group 'gdb-buffers
   :version "23.2")
 
 (defcustom gdb-thread-buffer-arguments t
   "Show function arguments in threads buffer."
   :type 'boolean
-  :group 'gdb
+  :group 'gdb-buffers
   :version "23.2")
 
 (defcustom gdb-thread-buffer-locations t
   "Show file information or library names in threads buffer."
   :type 'boolean
-  :group 'gdb
+  :group 'gdb-buffers
   :version "23.2")
 
 (defcustom gdb-thread-buffer-addresses nil
   "Show addresses for thread frames in threads buffer."
   :type 'boolean
-  :group 'gdb
+  :group 'gdb-buffers
   :version "23.2")
 
 (defvar gdb-debug-log nil
@@ -1528,11 +1545,9 @@ then no --frame option is added."
 
 If `gdb-thread-number' is nil, just wrap NAME in asterisks."
   (concat "*" name
-          (format
-           (cond ((local-variable-p 'gdb-thread-number) " (bound to thread %s)")
-                 (gdb-thread-number " (current thread %s)")
-                 (t ""))
-           gdb-thread-number)
+          (if (local-variable-p 'gdb-thread-number) 
+              (format " (bound to thread %s)" gdb-thread-number)
+            "")
           "*"))
 
 
@@ -3144,7 +3159,7 @@ DOC is an optional documentation string."
   ;; TODO Rename overlay variable for disassembly mode
   (add-to-list 'overlay-arrow-variable-list 'gdb-disassembly-position)
   (setq fringes-outside-margins t)
-  (setq gdb-disassembly-position (make-marker))
+  (set (make-local-variable 'gdb-disassembly-position) (make-marker))
   (set (make-local-variable 'font-lock-defaults)
        '(gdb-disassembly-font-lock-keywords))
   (run-mode-hooks 'gdb-disassembly-mode-hook)
