@@ -438,6 +438,13 @@ stopped thread is already selected."
   :group 'gdb-buffers
   :version "23.2")
 
+(defcustom gdb-show-threads-by-default nil
+  "Show threads list buffer instead of breakpoints list by
+default."
+  :type 'boolean
+  :group 'gdb-buffers
+  :version "23.2")
+
 (defvar gdb-debug-log nil
   "List of commands sent to and replies received from GDB.
 Most recent commands are listed first.  This list stores only the last
@@ -3835,7 +3842,9 @@ SPLIT-HORIZONTAL and show BUF in the new window."
   (gdb-set-window-buffer (gdb-stack-buffer-name))
   (split-window-horizontally)
   (other-window 1)
-  (gdb-set-window-buffer (gdb-breakpoints-buffer-name))
+  (gdb-set-window-buffer (if gdb-show-threads-by-default
+                             (gdb-threads-buffer-name)
+                           (gdb-breakpoints-buffer-name)))
   (other-window 1))
 
 (defcustom gdb-many-windows nil
