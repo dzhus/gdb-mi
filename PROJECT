@@ -1,124 +1,185 @@
 -*-org-*-
 
-#+TAGS: fix(f) redesign(r) new(n) ui(u) needinfo(i) 
-
-## f for bugs, r for parts which need refactoring, n for new features
-
-* Being DRY
-** TODO Derive buffers mode from one generic mode                  :redesign:
-   There's too much copy&paste in code for modes of various GDB
-   buffers.
-
-** DONE Write `gdb-def-frame-for-buffer`
-   To define `gdb-frame-*-buffer` functions
+#+TAGS: threads(t) ui(u) new(n) parsing(p) GDB(g) cleanup(c)
   
-** DONE Write `gdb-def-display-buffer`
-   CLOSED: [2009-06-21 Вск 18:33]
-   To define `gdb-display-*-buffer` functions
+* IN PROGRESS [#A] Non-stop support                                 :threads:
+  Related reading:
+  1. [[gnus:gmane.comp.gdb.devel#200803190016.02072.vladimir@codesourcery.com][MI non-stop mode spec]];
+  2. [[gnus:gmane.comp.gdb.devel#200804261939.37635.vladimir@codesourcery.com][MI non-stop interface details]];
+     1. [[gnus:gmane.comp.gdb.devel#200805011852.25316.pedro@codesourcery.com][Pedro Alves: Re: MI non-stop interface details]] — -exec
+        commands behaviour.
+  3. [[gnus:gmane.comp.gdb.devel#200806032253.39575.pedro@codesourcery.com][non-stop and current thread exiting]];
+  4. [[gnus:gmane.comp.gdb.devel#200805051232.31733.vladimir@codesourcery.com][Adjust MI non-stop/MI3 spec]] — big spec from Volodya.
+  5. [[gnus:gmane.comp.gdb.devel#200806181601.52404.vladimir@codesourcery.com][Email from Vladimir Prus: MI threads behaviour]]
+
+
+** DONE Update threads buffer in real-time
+   CLOSED: [2009-07-13 Пнд] 
+
+   *running messages are asynchronously issued whenever new thread is
+   created. We also use =thread-exited to update threads buffer.
+** DONE Handle *stopped and =thread-selected to select new main current thread
+   CLOSED: [2009-07-18 Сбт 19:41]
+   Current thread selection should be handled in Emacs (in gdb-stopped
+   handler). 
   
+   We use gdb-switch-reasons, gdb-switch-when-stopped and `*stopped`
+   in non-stop mode (when we're non-stop, we're async as well, which
+   guarantees that `*stopped` records have `reason` field).
 
-** IN PROGRESS Use `gdb-auto-update-handler`/`gdb-auto-updated-buffer` more
+   In all-stop mode, we use `=thread-selected` because it seems that
+   GDB's suggestions make sense in this case.
 
-** TODO Use `def-gdb-auto-update-handler`
-   See also gdb-ui.el for `def-gdb-auto-updated-buffer`
+   Perhaps we don't need to update *everything* if we hit *stopped but
+   no another thread has been selected.
+
+   We still send -thread-select to GDB when selecting thread via
+   `gdb-select-thread`.
    
-* Broken glass
-** DONE gdb-display-locals-buffer
-   CLOSED: [2009-06-21 Вск 17:51]
-   Undefined
-** DONE gdb-many-windows
-   Broken
+** IN PROGRESS Handle -exec properly                                     :ui:
+   When issued via thread list buffer, use only current thread; use
+   --all threads otherwise. Make this behaviour customizable.
+
+   There should be a A/T selector `gdb-gud-control-all-threads` on the
+   toolbar which would select whether GUD commands should apply to all
+   threads or to the current one only.
+** DONE Show Go/Stop toolbar and menu items only when needed             :ui:
+   CLOSED: [2009-08-02 Вск 23:51]
+   In all-stop «Go» button is shown when `gud-running` is t. «Stop» is
+   shown when `gud-running` is nil.
    
-* Object approach
-** Rewrite existing buffers
-*** DONE Frames list handler
-    Ditch `gdb-stack-list-frames-regexp`, hack
-    `gdb-stack-list-frames-handler` and `gdb-frame-handler`.
-*** DONE Abandon fadr
-    CLOSED: [2009-06-27 Сбт]
-    Use `bindat-get-field` instead.
-*** DONE Breakpoints
-    CLOSED: [2009-06-28 Вск 00:44]
-    Rewrite `gdb-break-list-handler` using `gdb-get-field`. Introduce
-    new variable `gdb-break-list` with all breakpoints data to avoid
-    reparsing breakpoints buffer every time we need to add breakpoint
-    icons on fringes etc.
-* New buffers
-** IN PROGRESS [1/3] Threads
-   - [X] basic information
-   - [ ] keymap
-   - [ ] current thread selection
-** IN PROGRESS Disassembly
-   - [X] basic information
-         
-         `-data-disassemble` command needs filename and line
-         information, which can be learned from GDB with
-         `-stack-info-frame` command. The code currently relies on
-         *global* variables `gdb-selected-file` and
-         `gdb-selected-line`, both set in `gdb-frame-handler`.
-         See also [[Stack information handling]].
+   In non-stop, when `gdb-gud-control-all-threads` is nil (we are in T
+   mode), gud-running is changed whenever we change current selected
+   thread in Emacs.
 
-   - [X] alignment
+   We use `gdb-update-gud-running` to set `gud-running` properly for
+   non-stop/T mode. This function should be called
+   whenever current thread is changed (`gdb-select-thread`, `gdb-stop`) or some
+   thread goes running (see `gdb-running`). We call it from
+   `gdb-thread-list-handler-custom` to ensure that by the time we
+   check current thread state this information is up-to-date.
 
-   - [X] breakpoints
+   For all-stop mode, we can't get information about all threads while
+   running, so we set it in the old way.
 
-   - [X] overlay arrow
+   To show toolbar/menu items properly when `gdb-gud-control-all-threads`
+   is t (we are in non-stop/A mode), we need to check if all threads are
+   running and use `gdb-running-threads-count` and
+   `gdb-stopped-threads-count` updated via -thread-info handler. This
+   way we'll be able to get «Continue All» button when at least some
+   threads are stopped and «Stop All» button when some threads are
+   running.
 
-   - [ ] disassemble function around point, not just the current one
+   This is implemented via `gdb-show-run-p` and `gdb-show-stop-p`
+   functions.
+** DONE gud-stop
+   CLOSED: [2009-07-18 Сбт 03:36]
+   gud-stop-subjob calls comint-stop-subjob. Certainly we'd like to
+   stop program execution with one big button.
 
-         To achieve this, I'll need to extend
-         `gdb-disassembly-handler` with optional argument for target
-         buffer to put disassembly data in
-         
-   - [ ] keymap
-         
-   - [ ] hyperlinks for jump instructions
+** DONE Menu options clarification                                       :ui:
+   CLOSED: [2009-07-27 Пнд 23:34]
+   Setting gdb-non-stop in the menu does not immediately change GDB
+   mode — user should be notified about the need to restart gdb
+   session.
+** TODO Fallback to all-stop when non-stop is unavaliable                :ui:
+   [[gnus:gmane.emacs.devel#jwvprbwb57t.fsf-monnier%2Bemacs@gnu.org][Email from Stefan Monnier: Re: Emacs and external program]]
 
-         Add clickable buttons for `jmp`, `jl` arguments
    
-** TODO Program memory                                                  :new:
-   - [X] basic information
-   - [X] keymap
-   - [X] header
-   - [X] alignment
-         
-   - [ ] show function name instead of just address
-         
-         MI does not provide function name in `-data-read-memory`
-         output =\ `-symbol-info-symbol` should allow this, but it's
-         not implemented yet.
+** DONE User should not be allowed to change gdb-non-stop during debug
+   CLOSED: [2009-07-23 Чтв 16:36]
 
-* GDB+Emacs interface improvements
-
-* Overall UI improvements                                                :ui:
-** TODO Improve `gdb-jump-to`
-   See also `gud-display-line` for implementation ideas
-** TODO Headers
-
-* Multiple threads support                                         :redesign:
-** TODO Buffer model review
-   Several new concepts for GDB buffers must be introduced:
+   We achieve this by separating gdb-non-stop-setting and
+   gdb-non-stop.
    
-   - [ ] buffer-local variable with a number of thread this buffer shows
-     information for
+* DONE [#A] Proper =thread-selected handler                         :threads:
+  CLOSED: [2009-07-19 Вск 13:43]
+  Type `thread N` in GUD buffer and you'll get outdated information
+  about all the buffers because this command makes GDB emit `^done`
+  followed by `=thread-selected` notification. `^done` causes
+  `gdb-update` as usually. I've made handler for =thread-selected
+  switch to that thread and call `gdb-update` again, but things happen
+  to fast and second call gets cut off by our beloved
+  gdb-pending-triggers.
 
-   - [ ] same for frame number
+  Solution is `gdb-wait-for-pending` macro: it guarantees that its
+  body will get executed when `gdb-pending-triggers` is empty.
 
-   - [ ] extend `gdb-get-buffer-create` etc. to allow working with
-     buffers of the same type (like frames list) for several threads
-     simultaneously
+* IN PROGRESS [#A] Improve multi-thread UI                          :threads:
+  Thread-bound buffers produce just a big mess. When observing several
+  threads, information should be presented in a more usable way.
 
-   - [ ] make sure thread selection interface is clear and intuitive
+  Currently we try not to break the whole window layout by using
+  `gdb-preempt-existing-or-display-buffer` function to display
+  thread-bound buffers.
+  
+  Ideas:
+  
+  - tree view for thread stacks in thread list buffer
 
-   - [ ] include thread information in buffer names to avoid confusion
-** TODO Stack information
-   There must be some way to examine stack info for different threads
+  - tab-like buttons for different threads in buffers showing
+    locals&registers
+* TODO [#C] Support --frame                                             :new:
+  It should be possible to see locals for different frames, not only
+  the top one. Does it make sense to update such buffers as we step
+  through the target?
 
-* IN PROGRESS Stack information handling                           :redesign:
-  `gdb-frame-handler` is not robust. Must think of how should gdb-mi
+* TODO [#C] Cleanup unused buffers                               :threads:ui:
+  Kill buffers which are bound to threads which already exited. This
+  can be done by handling =thread-exited notification.
+
+  100 threads exit quickly and we're roasted. Better provide
+  `gdb-cleanup-buffer` function which can be called manually.
+  
+* TODO [#B] Make sure that threads list handler is executed first
+  Currently we can kill thread list buffer so when it's resurrected in
+  `gdb-update`, it goes to the end of `gdb-buf-publisher` list. As the
+  result, other handlers may get outdated information from
+  `gdb-threads-list`.
+
+* TODO [#B] Do not use goto-line                                         :ui:
+  gud-display-frame and gdb-place-breakpoints use goto-line which
+  yields «Mark set» message. This prevents user from seeing important
+  messages about stopped/switched threads.
+* DONE [#B] Fix multiple overlay arrows                          :threads:ui:
+  CLOSED: [2009-08-02 Вск 23:51]
+  When observing disassembly/stack buffer for several threads, overlay
+  arrow is shown only in one of them.
+  
+  Stack buffer arrow is shown for current thread only (we cannot
+  change frame for non-current thread, so putting arrow there is useless).
+
+  Disassembly arrow is set via buffer-local `gdb-disassembly-position`
+  variable.
+* DONE Fix pending breakpoints
+  CLOSED: [2009-07-21 Втр 00:38]
+* Disassembly buffer
+** TODO Hyperlinks for jump instructions in disassembly buffer       :ui:new:
+   Add clickable buttons for jmp, jl arguments
+    
+** TODO Disassemble function around point                               :new:
+
+** TODO Show main when program is not running
+   
+* Memory buffer
+** TODO Show function name instead of just address                   :ui:GDB:
+   
+   MI does not provide function name in -data-read-memory
+   output =\ [[-symbol-info-symbol]] should allow this, but it's
+   not implemented yet.
+
+* TODO [0/5] [#B] Rewrite handlers for -var commands                :parsing:
+  - [ ] gdb-var-create-handler
+  - [ ] gdb-var-evaluate-expression-handler
+  - [ ] gdb-edit-value-handler
+  - [ ] gdb-var-list-children-handler
+  - [ ] gdb-var-update-handler
+   
+* TODO [#D] Stack information handling
+  gdb-frame-handler is not robust. Must think of how should gdb-mi
   act when we stop in a routine w/o line info. Currently we simply
-  don't reset `gud-last-frame` in this case. Disassembly buffer falls
-  back to displaying `main` as `gdb-selected-file` gets nil.
+  don't reset gud-last-frame in this case. Disassembly buffer falls
+  back to displaying main as gdb-selected-file gets nil.
 
   When line information for top frame is unavailable, it's reasonable
   to make gdb-mi obey the highest of frames which have line:
@@ -131,9 +192,30 @@
 
   The same applies to disassembly buffer.
 
-* Black corners
-  Unclear parts of code which I don't fully understand yet.
-** gud-last-frame
-** gdb-pending-triggers
-** Why call ignored `list` command in `gdb-place-breakpoints`?
+* DONE [#D] Support overlay arrow in threads list for text terminals     :ui:
+  CLOSED: [2009-08-02 Вск 23:51]
+  gdb-mark-line does this
+* DONE Change gdb-display-buffer
+  CLOSED: [2009-07-22 Срд]
+  Too many windows appear now. It should be possible to preempt
+  visible buffer of some specific type with the same buffer for
+  another thread. gdb-get-buffer-by-type should be written for this.
+* DONE Improve gdb-jump-to                                               :ui:
+  CLOSED: [2009-07-22 Срд 22:41]
+  See also gud-display-line for implementation ideas
+  We don't need it at all.
+* GDB                                                                   :GDB:
+** TODO Send -symbol-info-symbol patch
+   Patch: [[file:~/projects/gdb-trunk/symbol-info-symbol.diff]]
 
+   Needed to [[show function name]] in memory buffer and [[show main]] in
+   disassembly.
+** TODO Write -stack-list-locals-and-args
+   
+** TODO Add current frame data to -stack
+** TODO Report that -break-info has broken script field
+   http://emacsbugs.donarmstrong.com/cgi-bin/bugreport.cgi?bug=3794
+   
+
+** TODO Report wrong -exec-interrupt documentation
+   -exec-interrupt accepts --thread
