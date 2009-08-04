@@ -133,6 +133,8 @@ Used to grey out relevant toolbar icons.")
 	   (and (eq gud-minor-mode 'gdbmi)
 		(> (car (window-fringes)) 0)))))
 
+(declare-function gdb-gud-context-call "gdb-mi.el")
+
 (defun gud-stop-subjob ()
   (interactive)
   (with-current-buffer gud-comint-buffer
