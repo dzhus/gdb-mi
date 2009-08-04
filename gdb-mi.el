@@ -2416,6 +2416,9 @@ If not in a source or disassembly buffer just set point."
     ;; Don't bind "q" to kill-this-buffer as we need it for breakpoint icons.
     (define-key map "q" 'gdb-delete-frame-or-window)
     (define-key map "\r" 'gdb-goto-breakpoint)
+    (define-key map "\t" '(lambda () 
+                            (interactive) 
+                            (gdb-set-window-buffer (gdb-threads-buffer-name) t)))
     (define-key map [mouse-2] 'gdb-goto-breakpoint)
     (define-key map [follow-link] 'mouse-face)
     map))
@@ -2485,6 +2488,9 @@ corresponding to the mode line clicked."
     (define-key map "i" 'gdb-interrupt-thread)
     (define-key map "c" 'gdb-continue-thread)
     (define-key map "s" 'gdb-step-thread)
+    (define-key map "\t" '(lambda () 
+                            (interactive) 
+                            (gdb-set-window-buffer (gdb-breakpoints-buffer-name) t)))
     (define-key map [mouse-2] 'gdb-select-thread)
     (define-key map [follow-link] 'mouse-face)
     map))
@@ -2500,11 +2506,9 @@ corresponding to the mode line clicked."
 		(lambda (event) (interactive "e")
 		  (save-selected-window
 		    (select-window (posn-window (event-start event)))
-		    (set-window-dedicated-p (selected-window) nil)
-		    (switch-to-buffer
-		     (gdb-get-buffer-create ',buffer))
-		    (setq header-line-format(gdb-set-header ',buffer))
-		    (set-window-dedicated-p (selected-window) t))))))
+                    (gdb-set-window-buffer 
+                     (gdb-get-buffer-create ',buffer) t)
+		    (setq header-line-format (gdb-set-header ',buffer)))))))
 
 (defvar gdb-breakpoints-header
   (list
@@ -3805,7 +3809,13 @@ SPLIT-HORIZONTAL and show BUF in the new window."
   (let ((same-window-regexps nil))
     (select-window (display-buffer gud-comint-buffer nil 0))))
 
-(defun gdb-set-window-buffer (name)
+(defun gdb-set-window-buffer (name &optional ignore-dedicated)
+  "Set buffer of selected window to NAME and dedicate window.
+
+When IGNORE-DEDICATED is non-nil, buffer is set even if selected
+window is dedicated."
+  (when ignore-dedicated
+    (set-window-dedicated-p (selected-window) nil))
   (set-window-buffer (selected-window) (get-buffer name))
   (set-window-dedicated-p (selected-window) t))
 
