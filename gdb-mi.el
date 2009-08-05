@@ -2586,7 +2586,8 @@ corresponding to the mode line clicked."
       (gdb-mark-line marked-line gdb-thread-position)))
   ;; We update gud-running here because we need to make sure that
   ;; gdb-threads-list is up-to-date
-  (gdb-update-gud-running))
+  (gdb-update-gud-running)
+  (gdb-emit-signal gdb-buf-publisher 'update-disassembly))
 
 (defmacro def-gdb-thread-buffer-command (name custom-defun &optional doc)
   "Define a NAME command which will act upon thread on the current line.
@@ -3138,7 +3139,9 @@ DOC is an optional documentation string."
     (when file
       (format "-data-disassemble -f %s -l %s -n -1 -- 0" file line)))
   gdb-disassembly-handler
-  '(update))
+  ;; We update disassembly only after we have actual frame information
+  ;; about all threads
+  '(update-disassembly))
 
 (def-gdb-auto-update-handler
   gdb-disassembly-handler
