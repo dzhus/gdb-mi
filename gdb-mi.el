@@ -2089,7 +2089,7 @@ calling `gdb-table-string'."
     (setf (gdb-table-column-sizes table)
           (mapcar* (lambda (x s)
                      (let ((new-x
-                            (max (abs x) (string-width s))))
+                            (max (abs x) (string-width (or s "")))))
                        (if right-align new-x (- new-x))))
                    (gdb-table-column-sizes table)
                    row))
