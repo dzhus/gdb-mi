@@ -168,8 +168,8 @@
    output =\ [[-symbol-info-symbol]] should allow this, but it's
    not implemented yet.
 
-* TODO [0/5] [#B] Rewrite handlers for -var commands                :parsing:
-  - [ ] gdb-var-create-handler
+* IN PROGRESS [1/5] [#B] Rewrite handlers for -var commands         :parsing:
+  - [X] gdb-var-create-handler
   - [ ] gdb-var-evaluate-expression-handler
   - [ ] gdb-edit-value-handler
   - [ ] gdb-var-list-children-handler

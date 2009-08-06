@@ -972,23 +972,22 @@ With arg, enter name of variable to be watched in the minibuffer."
 		     `(lambda () (gdb-var-create-handler ,expr)))))))
       (message "gud-watch is a no-op in this mode."))))
 
-(defconst gdb-var-create-regexp
-  "name=\"\\(.*?\\)\",.*numchild=\"\\(.*?\\)\",\\(?:.*value=\\(\".*\"\\),\\)?.*type=\"\\(.*?\\)\"")
-
 (defun gdb-var-create-handler (expr)
-  (goto-char (point-min))
-  (if (re-search-forward gdb-var-create-regexp nil t)
-      (let ((var (list
-		  (match-string 1)
-		  (if (and (string-equal gdb-current-language "c")
-			   gdb-use-colon-colon-notation gdb-selected-frame)
-		      (setq expr (concat gdb-selected-frame "::" expr))
-		    expr)
-		  (match-string 2)
-		  (match-string 4)
-		  (if (match-string 3) (read (match-string 3)))
-		  nil)))
-	(push var gdb-var-list)
+  (let* ((result (gdb-json-partial-output)))
+    (if (not (gdb-get-field result 'msg))
+        (let
+            ((var
+              (list
+               (gdb-get-field result 'name)
+               (if (and (string-equal gdb-current-language "c")
+                        gdb-use-colon-colon-notation gdb-selected-frame)
+                   (setq expr (concat gdb-selected-frame "::" expr))
+                 expr)
+               (gdb-get-field result 'numchild)
+               (gdb-get-field result 'type)
+               (gdb-get-field result 'value)
+               nil)))
+        (push var gdb-var-list)
 	(speedbar 1)
 	(unless (string-equal
 		 speedbar-initial-expansion-list-name "GUD")
@@ -998,7 +997,7 @@ With arg, enter name of variable to be watched in the minibuffer."
 	  (concat "-var-evaluate-expression " (car var))
 	  `(lambda () (gdb-var-evaluate-expression-handler
 		       ,(car var) nil)))))
-    (message-box "No symbol \"%s\" in current context." expr)))
+    (message-box "No symbol \"%s\" in current context." expr))))
 
 (defun gdb-speedbar-update ()
   (when (and (boundp 'speedbar-frame) (frame-live-p speedbar-frame)
