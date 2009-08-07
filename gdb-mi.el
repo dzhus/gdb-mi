@@ -252,19 +252,18 @@ Elements are either function names or pairs (buffer . function)")
   `(setq gdb-pending-triggers
          (delete ,item gdb-pending-triggers)))
 
-(defvar gdb-wait-for-pending-timeout 0.5)
+(defmacro gdb-wait-for-pending-timeout 0.5)
 
-(defun gdb-wait-for-pending (&rest body)
-  "Wait until `gdb-pending-triggers' is empty and execute BODY.
+(defmacro gdb-wait-for-pending (&rest body)
+  "Wait until `gdb-pending-triggers' is empty and evaluate FORM.
 
 This function checks `gdb-pending-triggers' value every
 `gdb-wait-for-pending' seconds."
-  `(run-with-timer 
-    gdb-wait-for-pending-timeout nil
-    (lambda ()
+  (run-with-timer 
+   gdb-wait-for-pending-timeout nil
+   `(lambda ()
       (if (not gdb-pending-triggers)
-          (progn
-            ,@body)
+          (progn ,@body)
         (gdb-wait-for-pending ,@body)))))
 
 ;; Publish-subscribe
