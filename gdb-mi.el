@@ -3509,21 +3509,19 @@ member."
 
 (defun gdb-registers-handler-custom ()
   (let ((register-values (gdb-get-field (gdb-json-partial-output) 'register-values))
-        (register-names-list (reverse gdb-register-names))
         (table (make-gdb-table)))
     (dolist (register register-values)
       (let* ((register-number (gdb-get-field register 'number))
              (value (gdb-get-field register 'value))
              (register-name (nth (string-to-number register-number) 
-                                 register-names-list)))
+                                 gdb-register-names)))
         (gdb-table-add-row
          table
          (list
           (propertize register-name 'font-lock-face font-lock-variable-name-face)
           (if (member register-number gdb-changed-registers)
               (propertize value 'font-lock-face font-lock-warning-face)
-            value))
-         '(mouse-face highlight))))
+            value)))))
     (insert (gdb-table-string table " "))))
 
 (defvar gdb-registers-mode-map
