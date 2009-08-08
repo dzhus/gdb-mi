@@ -2780,7 +2780,7 @@ in `gdb-memory-format'."
       ;; Show last page instead of empty buffer when out of bounds
       (progn
         (let ((gdb-memory-address gdb-memory-last-address))
-          (gdb-invalidate-memory)
+          (gdb-invalidate-memory 'update)
           (error err-msg))))))
 
 (defvar gdb-memory-mode-map
@@ -2816,7 +2816,7 @@ in `gdb-memory-format'."
   (interactive)
   (let ((arg (read-from-minibuffer "Memory address: ")))
     (setq gdb-memory-address arg))
-  (gdb-invalidate-memory))
+  (gdb-invalidate-memory 'update))
 
 (defmacro def-gdb-set-positive-number (name variable echo-string &optional doc)
   "Define a function NAME which reads new VAR value from minibuffer."
@@ -2830,7 +2830,7 @@ in `gdb-memory-format'."
          (if (<= count 0)
              (error "Positive number only")
            (customize-set-variable ',variable count)
-           (gdb-invalidate-memory))))))
+           (gdb-invalidate-memory 'update))))))
 
 (def-gdb-set-positive-number
   gdb-memory-set-rows
@@ -2851,7 +2851,7 @@ DOC is an optional documentation string."
   `(defun ,name () ,(when doc doc)
      (interactive)
      (customize-set-variable 'gdb-memory-format ,format)
-     (gdb-invalidate-memory)))
+     (gdb-invalidate-memory 'update)))
 
 (def-gdb-memory-format
   gdb-memory-format-binary "t"
@@ -2918,7 +2918,7 @@ DOC is an optional documentation string."
   `(defun ,name () ,(when doc doc)
      (interactive)
      (customize-set-variable 'gdb-memory-unit ,unit-size)
-     (gdb-invalidate-memory)))
+     (gdb-invalidate-memory 'update)))
 
 (def-gdb-memory-unit gdb-memory-unit-giant 8
   "Set the unit size to giant words (eight bytes).")
