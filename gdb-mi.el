@@ -2425,7 +2425,8 @@ If not in a source or disassembly buffer just set point."
     (define-key map "\r" 'gdb-goto-breakpoint)
     (define-key map "\t" '(lambda () 
                             (interactive) 
-                            (gdb-set-window-buffer (gdb-threads-buffer-name) t)))
+                            (gdb-set-window-buffer
+                             (gdb-get-buffer-create 'gdb-threads-buffer) t)))
     (define-key map [mouse-2] 'gdb-goto-breakpoint)
     (define-key map [follow-link] 'mouse-face)
     map))
@@ -2511,7 +2512,8 @@ corresponding to the mode line clicked."
     (define-key map "s" 'gdb-step-thread)
     (define-key map "\t" '(lambda () 
                             (interactive) 
-                            (gdb-set-window-buffer (gdb-breakpoints-buffer-name) t)))
+                            (gdb-set-window-buffer 
+                             (gdb-get-buffer-create 'gdb-breakpoints-buffer) t)))
     (define-key map [mouse-2] 'gdb-select-thread)
     (define-key map [follow-link] 'mouse-face)
     map))
@@ -3476,6 +3478,12 @@ member."
   (let ((map (make-sparse-keymap)))
     (suppress-keymap map)
     (define-key map "q" 'kill-this-buffer)
+    (define-key map "\t" '(lambda () 
+                            (interactive) 
+                            (gdb-set-window-buffer
+                             (gdb-get-buffer-create
+                              'gdb-registers-buffer
+                              gdb-thread-number) t)))
      map))
 
 (define-derived-mode gdb-locals-mode gdb-parent-mode "Locals"
@@ -3560,6 +3568,12 @@ member."
     (define-key map "\r" 'gdb-edit-register-value)
     (define-key map [mouse-2] 'gdb-edit-register-value)
     (define-key map "q" 'kill-this-buffer)
+    (define-key map "\t" '(lambda () 
+                            (interactive) 
+                            (gdb-set-window-buffer
+                             (gdb-get-buffer-create
+                              'gdb-locals-buffer
+                              gdb-thread-number) t)))
     map))
 
 (defvar gdb-registers-header
