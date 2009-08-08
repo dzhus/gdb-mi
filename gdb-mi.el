@@ -3521,14 +3521,31 @@ member."
           (propertize register-name 'font-lock-face font-lock-variable-name-face)
           (if (member register-number gdb-changed-registers)
               (propertize value 'font-lock-face font-lock-warning-face)
-            value)))))
+            value))
+         `(mouse-face highlight
+           help-echo "mouse-2: edit value"
+           gdb-register-name ,register-name))))
     (insert (gdb-table-string table " "))))
+
+(defun gdb-edit-register-value (&optional event)
+  "Assign a value to a register displayed in the registers buffer."
+  (interactive (list last-input-event))
+  (save-excursion
+    (if event (posn-set-point (event-end event)))
+    (beginning-of-line)
+    (let* ((var (gdb-get-field
+                 (get-text-property (point) 'gdb-register-name)))
+	   (value (read-string (format "New value (%s): " var))))
+      (gud-basic-call
+       (concat  "-gdb-set variable $" var " = " value)))))
 
 (defvar gdb-registers-mode-map
   (let ((map (make-sparse-keymap)))
     (suppress-keymap map)
+    (define-key map "\r" 'gdb-edit-register-value)
+    (define-key map [mouse-2] 'gdb-edit-register-value)
     (define-key map "q" 'kill-this-buffer)
-     map))
+    map))
 
 (defvar gdb-registers-header
   (list
