@@ -3108,7 +3108,7 @@ DOC is an optional documentation string."
   gdb-disassembly-handler
   ;; We update disassembly only after we have actual frame information
   ;; about all threads
-  '(update-disassembly))
+  '(update update-disassembly))
 
 (def-gdb-auto-update-handler
   gdb-disassembly-handler
