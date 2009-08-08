@@ -1587,6 +1587,14 @@ If `gdb-thread-number' is nil, just wrap NAME in asterisks."
               (format " (bound to thread %s)" gdb-thread-number)
             "")
           "*"))
+
+(defun gdb-current-context-mode-name (mode)
+  "Add thread information to MODE which is to be used as
+`mode-name'."
+  (concat mode
+          (if gdb-thread-number
+              (format " [thread %s]" gdb-thread-number)
+            "")))
 
 
 (defcustom gud-gdb-command-name "gdb -i=mi"
@@ -3183,8 +3191,9 @@ DOC is an optional documentation string."
         (let ((window (get-buffer-window (current-buffer) 0)))
           (set-window-point window (gdb-mark-line marked-line gdb-disassembly-position))))
       (setq mode-name
+            (gdb-current-context-mode-name
             (concat "Disassembly: " 
-                    (gdb-get-field (gdb-current-buffer-frame) 'func)))))
+                    (gdb-get-field (gdb-current-buffer-frame) 'func))))))
 
 (defun gdb-disassembly-place-breakpoints ()
   (gdb-remove-breakpoint-icons (point-min) (point-max))
@@ -3315,7 +3324,9 @@ member."
   (when (and gdb-frame-number
              (gdb-buffer-shows-main-thread-p))
     (gdb-mark-line (1+ (string-to-number gdb-frame-number))
-                   gdb-stack-position)))
+                   gdb-stack-position))
+  (setq mode-name
+        (gdb-current-context-mode-name "Frames")))
 
 (defun gdb-stack-buffer-name ()
   (gdb-current-context-buffer-name
@@ -3447,7 +3458,8 @@ member."
          `(gdb-local-variable ,local))))
     (insert (gdb-table-string table " "))
     (setq mode-name
-          (concat "Locals: " (gdb-get-field (gdb-current-buffer-frame) 'func)))))
+          (gdb-current-context-mode-name
+          (concat "Locals: " (gdb-get-field (gdb-current-buffer-frame) 'func))))))
 
 (defvar gdb-locals-header
   (list
@@ -3523,7 +3535,9 @@ member."
          `(mouse-face highlight
            help-echo "mouse-2: edit value"
            gdb-register-name ,register-name))))
-    (insert (gdb-table-string table " "))))
+    (insert (gdb-table-string table " "))
+    (setq mode-name
+          (gdb-current-context-mode-name "Registers"))))
 
 (defun gdb-edit-register-value (&optional event)
   "Assign a value to a register displayed in the registers buffer."
