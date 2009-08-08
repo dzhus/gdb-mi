@@ -1661,9 +1661,9 @@ is running."
           (string= (gdb-get-field (gdb-current-buffer-thread) 'state)
                    "running"))
     ;; We change frame number only if the state of current thread has
-    ;; changed.
+    ;; changed or there's no current thread.
     (when (not (eq gud-running old-value))
-      (if gud-running
+      (if (or gud-running (not (gdb-current-buffer-thread)))
           (setq gdb-frame-number nil)
         (setq gdb-frame-number "0")))))
 
@@ -1840,8 +1840,11 @@ Sets `gdb-thread-number' to new id."
   (gdb-force-mode-line-update
    (propertize gdb-inferior-status 'face font-lock-type-face))
   (setq gdb-active-process t)
-  (when (not gdb-non-stop)
-    (setq gud-running t)))
+  (setq gud-running t)
+  ;; GDB doesn't seem to respond to -thread-info before first stop or
+  ;; thread exit (even in non-stop mode), so this is useless.
+  ;; Behaviour may change in the future.
+  (gdb-emit-signal gdb-buf-publisher 'update-threads))
 
 ;; -break-insert -t didn't give a reason before gdb 6.9
 
