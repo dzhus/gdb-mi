@@ -141,6 +141,10 @@
   gud-display-frame and gdb-place-breakpoints use goto-line which
   yields «Mark set» message. This prevents user from seeing important
   messages about stopped/switched threads.
+
+* TODO [#B] Allow changing locals or registers for different threads :threads:
+  `gdb-edit-register-value` and `gdb-edit-locals-value` currently do
+  not respect `gdb-thread-number'
 * DONE [#B] Fix multiple overlay arrows                          :threads:ui:
   CLOSED: [2009-08-02 Вск 23:51]
   When observing disassembly/stack buffer for several threads, overlay
