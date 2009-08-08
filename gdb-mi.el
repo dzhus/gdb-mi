@@ -3413,7 +3413,8 @@ member."
   (save-excursion
     (if event (posn-set-point (event-end event)))
     (beginning-of-line)
-    (let* ((var (current-word))
+    (let* ((var (gdb-get-field
+                 (get-text-property (point) 'gdb-local-variable) 'name))
 	   (value (read-string (format "New value (%s): " var))))
       (gud-basic-call
        (concat  "-gdb-set variable " var " = " value)))))
@@ -3445,7 +3446,7 @@ member."
           (propertize type 'font-lock-face font-lock-type-face)
           (propertize name 'font-lock-face font-lock-variable-name-face)
           value)
-         '(mouse-face highlight))))
+         `(gdb-local-variable ,local))))
     (insert (gdb-table-string table " "))
     (setq mode-name
           (concat "Locals: " (gdb-get-field (gdb-current-buffer-frame) 'func)))))
