@@ -3550,6 +3550,7 @@ member."
              (value (gdb-get-field register 'value))
              (register-name (nth (string-to-number register-number) 
                                  gdb-register-names)))
+        (when register-name
         (gdb-table-add-row
          table
          (list
@@ -3559,7 +3560,7 @@ member."
             value))
          `(mouse-face highlight
            help-echo "mouse-2: edit value"
-           gdb-register-name ,register-name))))
+           gdb-register-name ,register-name)))))
     (insert (gdb-table-string table " "))
     (setq mode-name
           (gdb-current-context-mode-name "Registers"))))
