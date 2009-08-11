@@ -134,7 +134,14 @@ value.")
 (defvar gdb-frame-number nil
   "Selected frame level for main current thread.
 
-Reset whenever current thread changes.")
+Updated according to the following rules:
+
+When a thread is selected or current thread stops, set to \"0\".
+
+When current thread goes running (and possibly exits eventually),
+set to nil.
+
+May be manually changed by user with `gdb-select-frame'.")
 
 ;; Used to show overlay arrow in source buffer. All set in
 ;; gdb-get-main-selected-frame. Disassembly buffer should not use
@@ -1655,11 +1662,9 @@ need to be updated appropriately when current thread changes."
   (gdb-update-gud-running))
 
 (defun gdb-update-gud-running ()
-  "Set `gud-running' and `gdb-frame-number' according to the state
-of current thread.
+  "Set `gud-running' according to the state of current thread.
 
-`gdb-frame-number' is set to nil if new current thread is
-running.
+`gdb-frame-number' is set to 0 if current thread is now stopped.
 
 Note that when `gdb-gud-control-all-threads' is t, `gud-running'
 cannot be reliably used to determine whether or not execution
@@ -1673,12 +1678,10 @@ is running."
     (setq gud-running
           (string= (gdb-get-field (gdb-current-buffer-thread) 'state)
                    "running"))
-    ;; We change frame number only if the state of current thread has
-    ;; changed or there's no current thread.
-    (when (not (eq gud-running old-value))
-      (if (or gud-running (not (gdb-current-buffer-thread)))
-          (setq gdb-frame-number nil)
-        (setq gdb-frame-number "0")))))
+    ;; Set frame number to "0" when _current_ threads stops
+    (when (and (gdb-current-buffer-thread)
+               (not (eq gud-running old-value)))
+      (setq gdb-frame-number "0"))))
 
 (defun gdb-show-run-p ()
   "Return t if \"Run/continue\" should be shown on the toolbar."
@@ -1801,7 +1804,7 @@ is running."
 (defun gdb-thread-created (output-field))
 (defun gdb-thread-exited (output-field)
   "Handle =thread-exited async record: unset `gdb-thread-number'
-if current thread exited and update threads list."
+ if current thread exited and update threads list."
    (let* ((thread-id (gdb-get-field (gdb-json-string output-field) 'id)))
      (if (string= gdb-thread-number thread-id)
          (gdb-setq-thread-number nil))
