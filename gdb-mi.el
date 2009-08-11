@@ -1282,7 +1282,7 @@ this trigger is subscribed to `gdb-buf-publisher' and called with
               (gdb-add-subscriber gdb-buf-publisher
                                   (cons (current-buffer)
                                         (gdb-bind-function-to-buffer trigger (current-buffer))))
-              (funcall trigger 'update))
+              (funcall trigger 'start))
             (current-buffer))))))
 
 (defun gdb-bind-function-to-buffer (expr buffer)
@@ -2240,7 +2240,7 @@ HANDLER-NAME handler uses customization of CUSTOM-DEFUN. See
 (def-gdb-trigger-and-handler
   gdb-invalidate-breakpoints "-break-list"
   gdb-breakpoints-list-handler gdb-breakpoints-list-handler-custom
-  '(update))
+  '(start update))
 
 (gdb-set-buffer-rules 
  'gdb-breakpoints-buffer
@@ -2505,7 +2505,7 @@ corresponding to the mode line clicked."
 (def-gdb-trigger-and-handler
   gdb-invalidate-threads (gdb-current-context-command "-thread-info" gud-running)
   gdb-thread-list-handler gdb-thread-list-handler-custom
-  '(update update-threads))
+  '(start update update-threads))
 
 (gdb-set-buffer-rules
  'gdb-threads-buffer 
@@ -2767,7 +2767,7 @@ line."
           gdb-memory-columns)
   gdb-read-memory-handler
   gdb-read-memory-custom
-  '(update))
+  '(start update))
 
 (gdb-set-buffer-rules
  'gdb-memory-buffer
@@ -3139,11 +3139,11 @@ DOC is an optional documentation string."
          (file (gdb-get-field frame 'fullname))
          (line (gdb-get-field frame 'line)))
     (when file
-      (format "-data-disassemble -f %s -l %s -n -1 -- 0" file line)))
+      (format "-data-disassemble -f %s -l %s -n -1 -- 0" file line))
   gdb-disassembly-handler
   ;; We update disassembly only after we have actual frame information
-  ;; about all threads
-  '(update update-disassembly))
+  ;; about all threads, so no there's `update' signal in this list
+  '(start update-disassembly))
 
 (def-gdb-auto-update-handler
   gdb-disassembly-handler
@@ -3311,7 +3311,7 @@ breakpoints buffer."
 (def-gdb-trigger-and-handler
   gdb-invalidate-frames (gdb-current-context-command "-stack-list-frames")
   gdb-stack-list-frames-handler gdb-stack-list-frames-custom
-  '(update))
+  '(start update))
 
 (gdb-set-buffer-rules
  'gdb-stack-buffer
@@ -3421,7 +3421,7 @@ member."
   gdb-invalidate-locals
   (concat (gdb-current-context-command "-stack-list-locals") " --simple-values")
   gdb-locals-handler gdb-locals-handler-custom
-  '(update))
+  '(start update))
 
 (gdb-set-buffer-rules
  'gdb-locals-buffer
@@ -3544,7 +3544,7 @@ member."
   (concat (gdb-current-context-command "-data-list-register-values") " x")
   gdb-registers-handler
   gdb-registers-handler-custom
-  '(update))
+  '(start update))
 
 (gdb-set-buffer-rules
  'gdb-registers-buffer
