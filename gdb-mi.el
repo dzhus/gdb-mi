@@ -749,7 +749,16 @@ detailed description of this mode.
   (local-set-key "\C-i" 'gud-gdb-complete-command)
   (setq gdb-first-prompt t)
   (setq gud-running nil)
+
   (gdb-update)
+
+  (add-hook
+   'kill-buffer-hook
+   (function
+    (lambda ()
+      (gdb-input (list "-target-detach" 'ignore))))
+   nil t)
+
   (run-hooks 'gdb-mode-hook))
             
 (defun gdb-init-1 ()
