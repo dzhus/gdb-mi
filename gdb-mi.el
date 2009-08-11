@@ -572,12 +572,15 @@ When `gdb-non-stop' is nil, return COMMAND unchanged."
         (gdb-current-context-command command t))
     command))
 
-;; TODO Document this. We use noarg when not in gud-def
-(defun gdb-gud-context-call (cmd1 &optional cmd2 noall noarg)
-  (gud-call
-   (concat
-    (gdb-gud-context-command cmd1 noall)
-    cmd2) (when (not noarg) 'arg)))
+(defmacro gdb-gud-context-call (cmd1 &optional cmd2 noall noarg)
+  "`gud-call' wrapper which adds --thread/--all options between
+CMD1 and CMD2. NOALL is the same as in `gdb-gud-context-command'.
+
+NOARG must be t when this macro is used outside `gud-def'"
+  `(gud-call
+    (concat
+     (gdb-gud-context-command ,cmd1 ,noall)
+     ,cmd2) ,(when (not noarg) 'arg)))
 
 ;;;###autoload
 (defun gdb (command-line)
