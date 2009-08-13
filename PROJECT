@@ -36,13 +36,16 @@
    We still send -thread-select to GDB when selecting thread via
    `gdb-select-thread`.
    
-** IN PROGRESS Handle -exec properly                                     :ui:
+** DONE Handle -exec properly                                            :ui:
+   CLOSED: [2009-08-13 Чтв 20:00]
    When issued via thread list buffer, use only current thread; use
    --all threads otherwise. Make this behaviour customizable.
 
    There should be a A/T selector `gdb-gud-control-all-threads` on the
    toolbar which would select whether GUD commands should apply to all
    threads or to the current one only.
+
+   Selector uses gud/thread.xpm and gud/all.xpm icons.
 ** DONE Show Go/Stop toolbar and menu items only when needed             :ui:
    CLOSED: [2009-08-02 Вск 23:51]
    In all-stop «Go» button is shown when `gud-running` is t. «Stop» is
@@ -137,8 +140,8 @@
   result, other handlers may get outdated information from
   `gdb-threads-list`.
 
-* TODO [#B] Do not use goto-line                                         :ui:
-  gud-display-frame and gdb-place-breakpoints use goto-line which
+* IN PROGRESS [#B] Do not use goto-line                                  :ui:
+  gud-display-frame and several routines in gdb-mi use goto-line which
   yields «Mark set» message. This prevents user from seeing important
   messages about stopped/switched threads.
 
@@ -180,11 +183,6 @@
   - [ ] gdb-var-update-handler
    
 * TODO [#D] Stack information handling
-  gdb-frame-handler is not robust. Must think of how should gdb-mi
-  act when we stop in a routine w/o line info. Currently we simply
-  don't reset gud-last-frame in this case. Disassembly buffer falls
-  back to displaying main as gdb-selected-file gets nil.
-
   When line information for top frame is unavailable, it's reasonable
   to make gdb-mi obey the highest of frames which have line:
 
@@ -193,8 +191,6 @@
   2 in start_thread of /lib/libpthread.so.0
   1 in hello of hello.c:8 <-- we should display this frame
   0 in printf of /lib/libc.so.6
-
-  The same applies to disassembly buffer.
 
 * DONE [#D] Support overlay arrow in threads list for text terminals     :ui:
   CLOSED: [2009-08-02 Вск 23:51]
@@ -212,14 +208,12 @@
 ** TODO Send -symbol-info-symbol patch
    Patch: [[file:~/projects/gdb-trunk/symbol-info-symbol.diff]]
 
-   Needed to [[show function name]] in memory buffer and [[show main]] in
-   disassembly.
+   Needed to [[show function name]] in memory buffer and [[show main]] and
+   library functions in disassembly.
 ** TODO Write -stack-list-locals-and-args
    
-** TODO Add current frame data to -stack
-** TODO Report that -break-info has broken script field
+** DONE Report that -break-info has broken script field
    http://emacsbugs.donarmstrong.com/cgi-bin/bugreport.cgi?bug=3794
    
-
 ** TODO Report wrong -exec-interrupt documentation
    -exec-interrupt accepts --thread
