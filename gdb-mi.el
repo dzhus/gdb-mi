@@ -3154,7 +3154,7 @@ DOC is an optional documentation string."
          (file (gdb-get-field frame 'fullname))
          (line (gdb-get-field frame 'line)))
     (when file
-      (format "-data-disassemble -f %s -l %s -n -1 -- 0" file line)))
+      (format "-data-disassemble -f %s -l %s -n -1 -- 0" file line))
   gdb-disassembly-handler
   ;; We update disassembly only after we have actual frame information
   ;; about all threads, so no there's `update' signal in this list
